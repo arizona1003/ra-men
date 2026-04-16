@@ -10,15 +10,20 @@ struct ShopCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .topLeading) {
-                LinearGradient(
-                    colors: [shop.genre.color.opacity(0.85), shop.genre.color.opacity(0.55)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .frame(height: 120)
-                Text("🍜")
-                    .font(.system(size: 56))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if let photoName = store.latestPhotoFilename(for: shop.id) {
+                    StoredPhotoView(filename: photoName)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .clipped()
+                } else {
+                    LinearGradient(
+                        colors: [shop.genre.color.opacity(0.85), shop.genre.color.opacity(0.55)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    Text("🍜")
+                        .font(.system(size: 56))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
                 HStack(spacing: 6) {
                     Text(shop.genre.emoji)
                     Text(shop.genre.rawValue)

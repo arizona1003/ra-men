@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct ReviewFormView: View {
     let shop: Shop
@@ -13,8 +14,14 @@ struct ReviewFormView: View {
     @State private var toppingScore: Int = 3
     @State private var comment: String = ""
 
+    @State private var pickerItems: [PhotosPickerItem] = []
+    @State private var pickedImages: [UIImage] = []
+    @State private var isProcessingPhotos = false
+
+    private let maxPhotos = 4
+
     private var canSubmit: Bool {
-        !menu.trimmingCharacters(in: .whitespaces).isEmpty && overallRating > 0
+        !menu.trimmingCharacters(in: .whitespaces).isEmpty && overallRating > 0 && !isProcessingPhotos
     }
 
     var body: some View {
@@ -52,6 +59,10 @@ struct ReviewFormView: View {
                     scorePicker("具・トッピング", $toppingScore)
                 }
 
+                Section(header: photoSectionHeader) {
+                    photoPickerContent
+                }
+
                 Section("感想") {
                     TextEditor(text: $comment)
                         .frame(minHeight: 100)
@@ -78,6 +89,79 @@ struct ReviewFormView: View {
                         .bold()
                 }
             }
+            .onChange(of: pickerItems) { _, newItems in
+                loadPickedImages(newItems)
+            }
+        }
+    }
+
+    private var photoSectionHeader: some View {
+        HStack {
+            Text("写真")
+            Spacer()
+            Text("\(pickedImages.count) / \(maxPhotos)")
+                .font(.caption2)
+                .foregroundStyle(Theme.textSub)
+        }
+    }
+
+    @ViewBuilder
+    private var photoPickerContent: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(Array(pickedImages.enumerated()), id: \.offset) { index, image in
+                    ZStack(alignment: .topTrailing) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 92, height: 92)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                        Button {
+                            removeImage(at: index)
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundStyle(.white, Color.black.opacity(0.6))
+                        }
+                        .padding(4)
+                    }
+                }
+
+                if pickedImages.count < maxPhotos {
+                    PhotosPicker(
+                        selection: $pickerItems,
+                        maxSelectionCount: maxPhotos - pickedImages.count,
+                        matching: .images,
+                        photoLibrary: .shared()
+                    ) {
+                        VStack(spacing: 4) {
+                            if isProcessingPhotos {
+                                ProgressView()
+                            } else {
+                                Image(systemName: "photo.badge.plus")
+                                    .font(.system(size: 22))
+                            }
+                            Text("追加")
+                                .font(.caption2.weight(.bold))
+                        }
+                        .foregroundStyle(Theme.primary)
+                        .frame(width: 92, height: 92)
+                        .background(Theme.primary.opacity(0.08))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .strokeBorder(Theme.primary.opacity(0.4), style: StrokeStyle(lineWidth: 1.5, dash: [4]))
+                        )
+                    }
+                    .disabled(isProcessingPhotos)
+                }
+            }
+            .padding(.vertical, 4)
+        }
+
+        if !pickedImages.isEmpty {
+            Text("写真は最大 \(maxPhotos) 枚まで添付できます")
+                .font(.caption2)
+                .foregroundStyle(Theme.textSub)
         }
     }
 
@@ -93,7 +177,35 @@ struct ReviewFormView: View {
         }
     }
 
+    private func removeImage(at index: Int) {
+        guard pickedImages.indices.contains(index) else { return }
+        pickedImages.remove(at: index)
+        if pickerItems.indices.contains(index) {
+            pickerItems.remove(at: index)
+        }
+    }
+
+    private func loadPickedImages(_ items: [PhotosPickerItem]) {
+        guard items.count > pickedImages.count else { return }
+        let newItems = Array(items.suffix(items.count - pickedImages.count))
+        isProcessingPhotos = true
+        Task {
+            var appended: [UIImage] = []
+            for item in newItems {
+                if let data = try? await item.loadTransferable(type: Data.self),
+                   let image = UIImage(data: data) {
+                    appended.append(image)
+                }
+            }
+            await MainActor.run {
+                pickedImages.append(contentsOf: appended)
+                isProcessingPhotos = false
+            }
+        }
+    }
+
     private func submit() {
+        let savedNames = pickedImages.compactMap { PhotoStore.save($0) }
         let review = Review(
             shopID: shop.id,
             visitedAt: visitedAt,
@@ -102,7 +214,8 @@ struct ReviewFormView: View {
             soupScore: soupScore,
             noodleScore: noodleScore,
             toppingScore: toppingScore,
-            comment: comment.trimmingCharacters(in: .whitespacesAndNewlines)
+            comment: comment.trimmingCharacters(in: .whitespacesAndNewlines),
+            photoFilenames: savedNames
         )
         store.addReview(review)
         dismiss()

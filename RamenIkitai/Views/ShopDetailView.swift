@@ -33,50 +33,66 @@ struct ShopDetailView: View {
     }
 
     private var header: some View {
-        VStack(spacing: 10) {
-            Text("🍜").font(.system(size: 84))
-            HStack(spacing: 6) {
-                Text(shop.genre.emoji)
-                Text(shop.genre.rawValue)
-                    .font(.caption.weight(.bold))
+        ZStack {
+            if let photoName = store.latestPhotoFilename(for: shop.id) {
+                StoredPhotoView(filename: photoName)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 280)
+                    .clipped()
+                LinearGradient(
+                    colors: [Color.black.opacity(0.2), Color.black.opacity(0.75)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            } else {
+                LinearGradient(
+                    colors: [shop.genre.color, Theme.dark],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
             }
-            .padding(.horizontal, 10).padding(.vertical, 4)
-            .background(Color.white.opacity(0.15))
-            .foregroundStyle(.white)
-            .clipShape(Capsule())
 
-            Text(shop.name)
-                .font(.system(size: 24, weight: .heavy))
+            VStack(spacing: 10) {
+                if store.latestPhotoFilename(for: shop.id) == nil {
+                    Text("🍜").font(.system(size: 84))
+                }
+                HStack(spacing: 6) {
+                    Text(shop.genre.emoji)
+                    Text(shop.genre.rawValue)
+                        .font(.caption.weight(.bold))
+                }
+                .padding(.horizontal, 10).padding(.vertical, 4)
+                .background(Color.white.opacity(0.15))
                 .foregroundStyle(.white)
-                .multilineTextAlignment(.center)
-            Text(shop.nameKana)
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.75))
-            Text("\(shop.prefecture) \(shop.area)")
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.85))
+                .clipShape(Capsule())
 
-            HStack(spacing: 14) {
-                Text(String(format: "%.1f", rating))
-                    .font(.system(size: 32, weight: .heavy))
-                    .foregroundStyle(Theme.accent)
-                RatingStars(rating: rating, size: 18, color: Theme.accent)
-                Text("・ラー活 \(reviews.count)件")
+                Text(shop.name)
+                    .font(.system(size: 24, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .shadow(color: .black.opacity(0.3), radius: 4)
+                Text(shop.nameKana)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.75))
+                Text("\(shop.prefecture) \(shop.area)")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.85))
+
+                HStack(spacing: 14) {
+                    Text(String(format: "%.1f", rating))
+                        .font(.system(size: 32, weight: .heavy))
+                        .foregroundStyle(Theme.accent)
+                    RatingStars(rating: rating, size: 18, color: Theme.accent)
+                    Text("・ラー活 \(reviews.count)件")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.85))
+                }
+                .padding(.top, 4)
             }
-            .padding(.top, 4)
+            .padding(.vertical, 32)
+            .padding(.horizontal, 20)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
-        .padding(.horizontal, 20)
-        .background(
-            LinearGradient(
-                colors: [shop.genre.color, Theme.dark],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
     }
 
     private var actionsBar: some View {
@@ -281,6 +297,10 @@ struct ReviewCard: View {
                 scoreChip("スープ", review.soupScore)
                 scoreChip("麺", review.noodleScore)
                 scoreChip("具", review.toppingScore)
+            }
+            if !review.photoFilenames.isEmpty {
+                PhotoThumbnailStrip(filenames: review.photoFilenames, size: 84)
+                    .padding(.top, 2)
             }
             if !review.comment.isEmpty {
                 Text(review.comment)

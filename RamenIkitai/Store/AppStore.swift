@@ -90,6 +90,7 @@ final class AppStore: ObservableObject {
     }
 
     func removeReview(_ review: Review) {
+        PhotoStore.delete(filenames: review.photoFilenames)
         reviews.removeAll { $0.id == review.id }
         saveReviews()
     }
@@ -205,6 +206,7 @@ final class AppStore: ObservableObject {
     // MARK: - Reset
 
     func resetAll() {
+        PhotoStore.deleteAll()
         reviews.removeAll()
         wantIDs.removeAll()
         userName = "ラーメン好き"
@@ -214,6 +216,18 @@ final class AppStore: ObservableObject {
         d.removeObject(forKey: wantsKey)
         d.removeObject(forKey: userNameKey)
         d.removeObject(forKey: favGenreKey)
+    }
+
+    // MARK: - Photos
+
+    /// 店舗のヒーロー画像に使う、ラー活の最新写真ファイル名を返す。
+    func latestPhotoFilename(for shopID: UUID) -> String? {
+        reviews
+            .filter { $0.shopID == shopID && !$0.photoFilenames.isEmpty }
+            .sorted { $0.visitedAt > $1.visitedAt }
+            .first?
+            .photoFilenames
+            .first
     }
 }
 

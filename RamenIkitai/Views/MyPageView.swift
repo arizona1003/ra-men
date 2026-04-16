@@ -233,6 +233,10 @@ struct MyReviewCard: View {
                 RatingStars(rating: Double(review.overallRating), size: 12)
                 Text(review.menu).font(.caption2).foregroundStyle(Theme.textSub)
             }
+            if !review.photoFilenames.isEmpty {
+                PhotoThumbnailStrip(filenames: review.photoFilenames, size: 72)
+                    .padding(.top, 2)
+            }
             if !review.comment.isEmpty {
                 Text(review.comment)
                     .font(.caption)
