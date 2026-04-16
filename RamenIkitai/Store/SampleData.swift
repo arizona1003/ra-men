@@ -1,0 +1,336 @@
+import Foundation
+
+enum SampleData {
+    static func makeShops() -> [Shop] {
+        [
+            Shop(
+                id: UUID(uuidString: "11111111-1111-1111-1111-000000000001")!,
+                name: "麺屋 龍神",
+                nameKana: "めんや りゅうじん",
+                genre: .shoyu,
+                prefecture: "東京都",
+                area: "新宿区",
+                address: "東京都新宿区西新宿1-2-3",
+                nearestStation: "新宿駅 西口 徒歩3分",
+                openHours: "11:00 - 22:00",
+                closedDay: "日曜日",
+                priceRange: "¥900 - ¥1,500",
+                hasParking: false,
+                acceptsReservation: false,
+                offersKaedama: true,
+                description: "鶏ガラと魚介のWスープが自慢の醤油ラーメン専門店。自家製麺のコシと香り高いスープの相性が絶品。",
+                menus: [
+                    .init(name: "特製醤油ラーメン", price: 1200, isSignature: true),
+                    .init(name: "醤油ラーメン", price: 900),
+                    .init(name: "味玉醤油", price: 1050),
+                    .init(name: "チャーシュー麺", price: 1400),
+                    .init(name: "替え玉", price: 150)
+                ],
+                noodleThickness: .medium,
+                soupRichness: .medium
+            ),
+            Shop(
+                id: UUID(uuidString: "11111111-1111-1111-1111-000000000002")!,
+                name: "味噌蔵 北の恵み",
+                nameKana: "みそぐら きたのめぐみ",
+                genre: .miso,
+                prefecture: "北海道",
+                area: "札幌市中央区",
+                address: "北海道札幌市中央区南1条西5-8",
+                nearestStation: "大通駅 徒歩5分",
+                openHours: "11:30 - 21:00",
+                closedDay: "水曜日",
+                priceRange: "¥1,000 - ¥1,800",
+                hasParking: true,
+                acceptsReservation: false,
+                offersKaedama: false,
+                description: "北海道産味噌と炒め野菜が織りなす、濃厚で奥深い一杯。寒い日に食べたくなる札幌味噌の王道。",
+                menus: [
+                    .init(name: "味噌ラーメン", price: 1100, isSignature: true),
+                    .init(name: "辛味噌ラーメン", price: 1250),
+                    .init(name: "味噌バターコーン", price: 1350),
+                    .init(name: "特製味噌", price: 1650)
+                ],
+                noodleThickness: .thick,
+                soupRichness: .rich
+            ),
+            Shop(
+                id: UUID(uuidString: "11111111-1111-1111-1111-000000000003")!,
+                name: "塩ラーメン 海の音",
+                nameKana: "しおらーめん うみのおと",
+                genre: .shio,
+                prefecture: "神奈川県",
+                area: "横浜市中区",
+                address: "神奈川県横浜市中区山下町12-3",
+                nearestStation: "元町・中華街駅 徒歩2分",
+                openHours: "11:00 - 15:00 / 17:00 - 21:00",
+                closedDay: "火曜日",
+                priceRange: "¥850 - ¥1,300",
+                hasParking: false,
+                acceptsReservation: false,
+                offersKaedama: false,
+                description: "透き通る黄金スープに、三陸産の昆布と真鯛の出汁が香る塩ラーメン。繊細さが光る一杯。",
+                menus: [
+                    .init(name: "塩ラーメン", price: 950, isSignature: true),
+                    .init(name: "特製塩", price: 1300),
+                    .init(name: "塩つけ麺", price: 1100),
+                    .init(name: "和え玉", price: 300)
+                ],
+                noodleThickness: .thin,
+                soupRichness: .light
+            ),
+            Shop(
+                id: UUID(uuidString: "11111111-1111-1111-1111-000000000004")!,
+                name: "博多豚骨 白龍",
+                nameKana: "はかたとんこつ はくりゅう",
+                genre: .tonkotsu,
+                prefecture: "福岡県",
+                area: "福岡市博多区",
+                address: "福岡県福岡市博多区中洲3-7-1",
+                nearestStation: "中洲川端駅 徒歩4分",
+                openHours: "18:00 - 翌3:00",
+                closedDay: "無休",
+                priceRange: "¥750 - ¥1,200",
+                hasParking: false,
+                acceptsReservation: false,
+                offersKaedama: true,
+                description: "深夜まで営業する博多の名店。18時間炊き込んだ濃厚豚骨と極細ストレート麺の黄金比。",
+                menus: [
+                    .init(name: "豚骨ラーメン", price: 800, isSignature: true),
+                    .init(name: "ネギ豚骨", price: 950),
+                    .init(name: "チャーシュー麺", price: 1200),
+                    .init(name: "替え玉", price: 120)
+                ],
+                noodleThickness: .thin,
+                soupRichness: .rich
+            ),
+            Shop(
+                id: UUID(uuidString: "11111111-1111-1111-1111-000000000005")!,
+                name: "家系総本山 剛家",
+                nameKana: "いえけいそうほんざん ごうや",
+                genre: .iekei,
+                prefecture: "神奈川県",
+                area: "横浜市鶴見区",
+                address: "神奈川県横浜市鶴見区鶴見中央4-5-6",
+                nearestStation: "鶴見駅 徒歩3分",
+                openHours: "10:30 - 23:00",
+                closedDay: "無休",
+                priceRange: "¥850 - ¥1,400",
+                hasParking: true,
+                acceptsReservation: false,
+                offersKaedama: true,
+                description: "豚骨醤油のキレと酒井製麺の中太麺、ほうれん草・海苔・チャーシュー。家系の王道を受け継ぐ一杯。",
+                menus: [
+                    .init(name: "ラーメン（並）", price: 850, isSignature: true),
+                    .init(name: "ラーメン（中）", price: 950),
+                    .init(name: "ネギラーメン", price: 1100),
+                    .init(name: "チャーシュー麺", price: 1400),
+                    .init(name: "ライス", price: 100)
+                ],
+                noodleThickness: .medium,
+                soupRichness: .rich
+            ),
+            Shop(
+                id: UUID(uuidString: "11111111-1111-1111-1111-000000000006")!,
+                name: "ラーメン 豚将軍",
+                nameKana: "らーめん ぶたしょうぐん",
+                genre: .jiro,
+                prefecture: "東京都",
+                area: "千代田区",
+                address: "東京都千代田区神田小川町2-8",
+                nearestStation: "小川町駅 徒歩1分",
+                openHours: "11:00 - 14:30 / 17:30 - 22:00",
+                closedDay: "日曜日",
+                priceRange: "¥800 - ¥1,100",
+                hasParking: false,
+                acceptsReservation: false,
+                offersKaedama: false,
+                description: "野菜・ニンニク・背脂の三重奏。ガッツリ系の代表格。コールは「全マシ」で挑もう。",
+                menus: [
+                    .init(name: "ラーメン", price: 800, isSignature: true),
+                    .init(name: "豚入りラーメン", price: 1000),
+                    .init(name: "ラーメン小", price: 750),
+                    .init(name: "汁なし", price: 900)
+                ],
+                noodleThickness: .extraThick,
+                soupRichness: .extraRich
+            ),
+            Shop(
+                id: UUID(uuidString: "11111111-1111-1111-1111-000000000007")!,
+                name: "つけ麺 大河",
+                nameKana: "つけめん たいが",
+                genre: .tsukemen,
+                prefecture: "埼玉県",
+                area: "さいたま市大宮区",
+                address: "埼玉県さいたま市大宮区桜木町2-3-4",
+                nearestStation: "大宮駅 徒歩6分",
+                openHours: "11:00 - 15:00 / 18:00 - 22:00",
+                closedDay: "月曜日",
+                priceRange: "¥950 - ¥1,500",
+                hasParking: false,
+                acceptsReservation: false,
+                offersKaedama: false,
+                description: "濃厚魚介豚骨つけ汁に、もちもちの極太麺が絡む。スープ割りまで楽しんでほしい。",
+                menus: [
+                    .init(name: "つけ麺（並）", price: 950, isSignature: true),
+                    .init(name: "つけ麺（大）", price: 1050),
+                    .init(name: "特製つけ麺", price: 1500),
+                    .init(name: "あつもり", price: 0)
+                ],
+                noodleThickness: .extraThick,
+                soupRichness: .rich
+            ),
+            Shop(
+                id: UUID(uuidString: "11111111-1111-1111-1111-000000000008")!,
+                name: "担々麺 花椒楼",
+                nameKana: "たんたんめん かしょうろう",
+                genre: .tantanmen,
+                prefecture: "東京都",
+                area: "港区",
+                address: "東京都港区麻布十番2-1-5",
+                nearestStation: "麻布十番駅 徒歩3分",
+                openHours: "11:30 - 15:00 / 17:30 - 22:30",
+                closedDay: "無休",
+                priceRange: "¥1,100 - ¥1,700",
+                hasParking: false,
+                acceptsReservation: true,
+                offersKaedama: false,
+                description: "四川花椒の痺れと芝麻醤のコク。痺れと旨みの絶妙なバランスで中毒になる一杯。",
+                menus: [
+                    .init(name: "汁あり担々麺", price: 1200, isSignature: true),
+                    .init(name: "汁なし担々麺", price: 1250),
+                    .init(name: "特製担々麺", price: 1600)
+                ],
+                noodleThickness: .thin,
+                soupRichness: .rich
+            ),
+            Shop(
+                id: UUID(uuidString: "11111111-1111-1111-1111-000000000009")!,
+                name: "煮干し中華 青煮堂",
+                nameKana: "にぼしちゅうか せいしどう",
+                genre: .niboshi,
+                prefecture: "東京都",
+                area: "杉並区",
+                address: "東京都杉並区高円寺南4-2-11",
+                nearestStation: "高円寺駅 徒歩4分",
+                openHours: "11:30 - 15:00",
+                closedDay: "水曜・木曜",
+                priceRange: "¥950 - ¥1,300",
+                hasParking: false,
+                acceptsReservation: false,
+                offersKaedama: false,
+                description: "青森産の片口イワシを贅沢に使用。煮干しの苦味と旨みが共存する、マニア向けの一杯。",
+                menus: [
+                    .init(name: "煮干し中華そば", price: 950, isSignature: true),
+                    .init(name: "濃厚煮干し", price: 1050),
+                    .init(name: "特製煮干し", price: 1300)
+                ],
+                noodleThickness: .thin,
+                soupRichness: .medium
+            ),
+            Shop(
+                id: UUID(uuidString: "11111111-1111-1111-1111-000000000010")!,
+                name: "油そば専門 脂の道",
+                nameKana: "あぶらそばせんもん あぶらのみち",
+                genre: .abura,
+                prefecture: "東京都",
+                area: "武蔵野市",
+                address: "東京都武蔵野市吉祥寺本町1-10-4",
+                nearestStation: "吉祥寺駅 徒歩5分",
+                openHours: "11:00 - 23:00",
+                closedDay: "無休",
+                priceRange: "¥700 - ¥1,000",
+                hasParking: false,
+                acceptsReservation: false,
+                offersKaedama: true,
+                description: "タレと香味油が絡む一杯。酢とラー油で味変を楽しむのが通。",
+                menus: [
+                    .init(name: "油そば", price: 780, isSignature: true),
+                    .init(name: "辛油そば", price: 850),
+                    .init(name: "全部乗せ", price: 1000),
+                    .init(name: "ライス", price: 50)
+                ],
+                noodleThickness: .thick,
+                soupRichness: .medium
+            ),
+            Shop(
+                id: UUID(uuidString: "11111111-1111-1111-1111-000000000011")!,
+                name: "札幌味噌 雪あかり",
+                nameKana: "さっぽろみそ ゆきあかり",
+                genre: .miso,
+                prefecture: "北海道",
+                area: "札幌市北区",
+                address: "北海道札幌市北区北24条西5-1-1",
+                nearestStation: "北24条駅 徒歩2分",
+                openHours: "11:00 - 翌1:00",
+                closedDay: "第3火曜日",
+                priceRange: "¥950 - ¥1,500",
+                hasParking: true,
+                acceptsReservation: false,
+                offersKaedama: false,
+                description: "炒め野菜の香ばしさと三年熟成味噌。冬の札幌で食べたい、懐かしい味。",
+                menus: [
+                    .init(name: "味噌ラーメン", price: 980, isSignature: true),
+                    .init(name: "味噌野菜", price: 1180),
+                    .init(name: "特製味噌", price: 1500)
+                ],
+                noodleThickness: .thick,
+                soupRichness: .rich
+            ),
+            Shop(
+                id: UUID(uuidString: "11111111-1111-1111-1111-000000000012")!,
+                name: "中華そば 江戸の粋",
+                nameKana: "ちゅうかそば えどのいき",
+                genre: .shoyu,
+                prefecture: "東京都",
+                area: "中央区",
+                address: "東京都中央区日本橋人形町1-5-8",
+                nearestStation: "人形町駅 徒歩2分",
+                openHours: "11:00 - 15:00 / 17:00 - 20:30",
+                closedDay: "日曜・祝日",
+                priceRange: "¥800 - ¥1,200",
+                hasParking: false,
+                acceptsReservation: false,
+                offersKaedama: false,
+                description: "東京ラーメンの神髄。鶏ガラ清湯に醤油の香り、ナルトとチャーシュー。飽きのこない王道。",
+                menus: [
+                    .init(name: "中華そば", price: 850, isSignature: true),
+                    .init(name: "ワンタン麺", price: 1050),
+                    .init(name: "特製中華そば", price: 1200)
+                ],
+                noodleThickness: .thin,
+                soupRichness: .light
+            )
+        ]
+    }
+
+    static func makeReviews(for shops: [Shop]) -> [Review] {
+        guard shops.count >= 6 else { return [] }
+        return [
+            Review(
+                shopID: shops[0].id,
+                visitedAt: Date().addingTimeInterval(-86_400 * 3),
+                menu: "特製醤油ラーメン",
+                overallRating: 5,
+                soupScore: 5, noodleScore: 4, toppingScore: 5,
+                comment: "鶏と魚介のバランスが絶妙。スープを最後まで飲み干した。"
+            ),
+            Review(
+                shopID: shops[3].id,
+                visitedAt: Date().addingTimeInterval(-86_400 * 7),
+                menu: "豚骨ラーメン + 替え玉",
+                overallRating: 4,
+                soupScore: 5, noodleScore: 4, toppingScore: 3,
+                comment: "濃厚だけど後味すっきり。替え玉はバリカタで。"
+            ),
+            Review(
+                shopID: shops[5].id,
+                visitedAt: Date().addingTimeInterval(-86_400 * 14),
+                menu: "ラーメン 全マシ",
+                overallRating: 4,
+                soupScore: 4, noodleScore: 5, toppingScore: 4,
+                comment: "覚悟の全マシ。麺のワシワシ感が最高。"
+            )
+        ]
+    }
+}
