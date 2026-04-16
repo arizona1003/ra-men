@@ -14,6 +14,7 @@ struct ShopDetailView: View {
                 header
                 actionsBar
                 aboutSection
+                mapSection
                 specSection
                 menuSection
                 reviewsSection
@@ -128,6 +129,26 @@ struct ShopDetailView: View {
             infoRow("駐車場", shop.hasParking ? "あり" : "なし")
             infoRow("予約", shop.acceptsReservation ? "可" : "不可")
             infoRow("替え玉", shop.offersKaedama ? "あり" : "なし")
+        }
+        .padding(16)
+        .background(Theme.surface)
+    }
+
+    private var mapSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle("地図")
+            ShopMiniMapView(shop: shop, height: 180)
+            Button {
+                MapsLauncher.openInAppleMaps(shop)
+            } label: {
+                Label("Apple マップで経路を確認", systemImage: "map")
+                    .font(.system(size: 14, weight: .bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Theme.surfaceMuted)
+                    .foregroundStyle(Theme.text)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
         }
         .padding(16)
         .background(Theme.surface)

@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import CoreLocation
 
 @MainActor
 final class AppStore: ObservableObject {
@@ -135,6 +136,7 @@ final class AppStore: ObservableObject {
     enum SortOrder: String, CaseIterable, Identifiable {
         case rating     = "評価順"
         case reviews    = "ラー活数"
+        case distance   = "近い順"
         case name       = "名前順"
         var id: String { rawValue }
     }
@@ -144,7 +146,8 @@ final class AppStore: ObservableObject {
         genre: Genre? = nil,
         prefecture: String? = nil,
         wantsOnly: Bool = false,
-        sort: SortOrder = .rating
+        sort: SortOrder = .rating,
+        userLocation: CLLocation? = nil
     ) -> [Shop] {
         var list = shops
 
@@ -181,6 +184,10 @@ final class AppStore: ObservableObject {
             }
         case .reviews:
             list.sort { reviewCount(for: $0.id) > reviewCount(for: $1.id) }
+        case .distance:
+            if let userLocation {
+                list.sort { $0.distance(from: userLocation) < $1.distance(from: userLocation) }
+            }
         case .name:
             list.sort { $0.nameKana < $1.nameKana }
         }

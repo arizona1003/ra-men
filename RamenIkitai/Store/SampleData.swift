@@ -27,7 +27,9 @@ enum SampleData {
                     .init(name: "替え玉", price: 150)
                 ],
                 noodleThickness: .medium,
-                soupRichness: .medium
+                soupRichness: .medium,
+                latitude: 35.6906,
+                longitude: 139.6995
             ),
             Shop(
                 id: UUID(uuidString: "11111111-1111-1111-1111-000000000002")!,
@@ -52,7 +54,9 @@ enum SampleData {
                     .init(name: "特製味噌", price: 1650)
                 ],
                 noodleThickness: .thick,
-                soupRichness: .rich
+                soupRichness: .rich,
+                latitude: 43.0614,
+                longitude: 141.3544
             ),
             Shop(
                 id: UUID(uuidString: "11111111-1111-1111-1111-000000000003")!,
@@ -77,7 +81,9 @@ enum SampleData {
                     .init(name: "和え玉", price: 300)
                 ],
                 noodleThickness: .thin,
-                soupRichness: .light
+                soupRichness: .light,
+                latitude: 35.4428,
+                longitude: 139.6487
             ),
             Shop(
                 id: UUID(uuidString: "11111111-1111-1111-1111-000000000004")!,
@@ -102,7 +108,9 @@ enum SampleData {
                     .init(name: "替え玉", price: 120)
                 ],
                 noodleThickness: .thin,
-                soupRichness: .rich
+                soupRichness: .rich,
+                latitude: 33.5945,
+                longitude: 130.4099
             ),
             Shop(
                 id: UUID(uuidString: "11111111-1111-1111-1111-000000000005")!,
@@ -128,7 +136,9 @@ enum SampleData {
                     .init(name: "ライス", price: 100)
                 ],
                 noodleThickness: .medium,
-                soupRichness: .rich
+                soupRichness: .rich,
+                latitude: 35.5087,
+                longitude: 139.6762
             ),
             Shop(
                 id: UUID(uuidString: "11111111-1111-1111-1111-000000000006")!,
@@ -153,7 +163,9 @@ enum SampleData {
                     .init(name: "汁なし", price: 900)
                 ],
                 noodleThickness: .extraThick,
-                soupRichness: .extraRich
+                soupRichness: .extraRich,
+                latitude: 35.6958,
+                longitude: 139.7656
             ),
             Shop(
                 id: UUID(uuidString: "11111111-1111-1111-1111-000000000007")!,
@@ -178,7 +190,9 @@ enum SampleData {
                     .init(name: "あつもり", price: 0)
                 ],
                 noodleThickness: .extraThick,
-                soupRichness: .rich
+                soupRichness: .rich,
+                latitude: 35.9062,
+                longitude: 139.6235
             ),
             Shop(
                 id: UUID(uuidString: "11111111-1111-1111-1111-000000000008")!,
@@ -202,7 +216,9 @@ enum SampleData {
                     .init(name: "特製担々麺", price: 1600)
                 ],
                 noodleThickness: .thin,
-                soupRichness: .rich
+                soupRichness: .rich,
+                latitude: 35.6569,
+                longitude: 139.7363
             ),
             Shop(
                 id: UUID(uuidString: "11111111-1111-1111-1111-000000000009")!,
@@ -226,7 +242,9 @@ enum SampleData {
                     .init(name: "特製煮干し", price: 1300)
                 ],
                 noodleThickness: .thin,
-                soupRichness: .medium
+                soupRichness: .medium,
+                latitude: 35.7053,
+                longitude: 139.6495
             ),
             Shop(
                 id: UUID(uuidString: "11111111-1111-1111-1111-000000000010")!,
@@ -251,7 +269,9 @@ enum SampleData {
                     .init(name: "ライス", price: 50)
                 ],
                 noodleThickness: .thick,
-                soupRichness: .medium
+                soupRichness: .medium,
+                latitude: 35.7033,
+                longitude: 139.5797
             ),
             Shop(
                 id: UUID(uuidString: "11111111-1111-1111-1111-000000000011")!,
@@ -275,7 +295,9 @@ enum SampleData {
                     .init(name: "特製味噌", price: 1500)
                 ],
                 noodleThickness: .thick,
-                soupRichness: .rich
+                soupRichness: .rich,
+                latitude: 43.0885,
+                longitude: 141.3397
             ),
             Shop(
                 id: UUID(uuidString: "11111111-1111-1111-1111-000000000012")!,
@@ -299,7 +321,9 @@ enum SampleData {
                     .init(name: "特製中華そば", price: 1200)
                 ],
                 noodleThickness: .thin,
-                soupRichness: .light
+                soupRichness: .light,
+                latitude: 35.6851,
+                longitude: 139.7832
             )
         ]
     }

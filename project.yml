@@ -26,6 +26,7 @@ targets:
         CFBundleDisplayName: ラーメンイキタイ
         CFBundleShortVersionString: "1.0.0"
         CFBundleVersion: "1"
+        NSLocationWhenInUseUsageDescription: 現在地からの距離や近くのラーメン店の表示、地図での並び替えに使用します。
         UILaunchScreen:
           UIColorName: AccentColor
         UISupportedInterfaceOrientations:

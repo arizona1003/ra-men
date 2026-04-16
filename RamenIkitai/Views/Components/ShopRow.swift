@@ -1,8 +1,15 @@
 import SwiftUI
+import CoreLocation
 
 struct ShopRow: View {
     let shop: Shop
+    var userLocation: CLLocation? = nil
     @EnvironmentObject private var store: AppStore
+
+    private var distanceText: String? {
+        guard let userLocation else { return nil }
+        return LocationManager.formatDistance(shop.distance(from: userLocation))
+    }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -29,6 +36,11 @@ struct ShopRow: View {
                         .font(.caption2)
                         .foregroundStyle(Theme.textSub)
                         .lineLimit(1)
+                    if let distanceText {
+                        Text("・\(distanceText)")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(Theme.primary)
+                    }
                 }
                 Text(shop.name)
                     .font(.system(size: 15, weight: .bold))

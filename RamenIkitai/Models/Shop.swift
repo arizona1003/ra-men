@@ -1,4 +1,5 @@
 import Foundation
+import CoreLocation
 
 struct Shop: Identifiable, Codable, Hashable {
     let id: UUID
@@ -19,6 +20,20 @@ struct Shop: Identifiable, Codable, Hashable {
     var menus: [Menu]
     var noodleThickness: NoodleThickness
     var soupRichness: SoupRichness
+    var latitude: Double
+    var longitude: Double
+
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+
+    var clLocation: CLLocation {
+        CLLocation(latitude: latitude, longitude: longitude)
+    }
+
+    func distance(from location: CLLocation) -> CLLocationDistance {
+        clLocation.distance(from: location)
+    }
 
     struct Menu: Codable, Hashable, Identifiable {
         var id: UUID = UUID()

@@ -1,13 +1,23 @@
 import SwiftUI
+import CoreLocation
 
 struct SearchView: View {
     @EnvironmentObject private var store: AppStore
+    @StateObject private var location = LocationManager()
 
     @State private var query: String = ""
     @State private var selectedGenre: Genre?
     @State private var selectedPrefecture: String = ""
     @State private var wantsOnly: Bool = false
     @State private var sort: AppStore.SortOrder = .rating
+    @State private var displayMode: DisplayMode = .list
+    @State private var navShop: Shop?
+
+    enum DisplayMode: String, CaseIterable, Identifiable {
+        case list = "リスト"
+        case map  = "地図"
+        var id: String { rawValue }
+    }
 
     init(initialGenre: Genre? = nil) {
         _selectedGenre = State(initialValue: initialGenre)
@@ -19,7 +29,8 @@ struct SearchView: View {
             genre: selectedGenre,
             prefecture: selectedPrefecture.isEmpty ? nil : selectedPrefecture,
             wantsOnly: wantsOnly,
-            sort: sort
+            sort: sort,
+            userLocation: location.currentLocation
         )
     }
 
@@ -28,29 +39,10 @@ struct SearchView: View {
             VStack(spacing: 0) {
                 filterBar
                 Divider()
-                if results.isEmpty {
-                    emptyState
+                if displayMode == .list {
+                    listContent
                 } else {
-                    List {
-                        Section {
-                            Text("\(results.count) 件のラーメン店")
-                                .font(.caption)
-                                .foregroundStyle(Theme.textSub)
-                                .listRowSeparator(.hidden)
-                                .listRowBackground(Color.clear)
-                        }
-                        ForEach(results) { shop in
-                            NavigationLink {
-                                ShopDetailView(shop: shop)
-                            } label: {
-                                ShopRow(shop: shop)
-                            }
-                            .listRowBackground(Theme.surface)
-                        }
-                    }
-                    .listStyle(.plain)
-                    .background(Theme.background)
-                    .scrollContentBackground(.hidden)
+                    mapContent
                 }
             }
             .background(Theme.background)
@@ -60,11 +52,87 @@ struct SearchView: View {
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "店名・エリア・ジャンル")
+            .navigationDestination(item: $navShop) { shop in
+                ShopDetailView(shop: shop)
+            }
+            .onChange(of: sort) { _, newValue in
+                if newValue == .distance {
+                    location.request()
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var listContent: some View {
+        if results.isEmpty {
+            emptyState
+        } else {
+            List {
+                Section {
+                    Text("\(results.count) 件のラーメン店")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSub)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                }
+                ForEach(results) { shop in
+                    NavigationLink {
+                        ShopDetailView(shop: shop)
+                    } label: {
+                        ShopRow(shop: shop, userLocation: location.currentLocation)
+                    }
+                    .listRowBackground(Theme.surface)
+                }
+            }
+            .listStyle(.plain)
+            .background(Theme.background)
+            .scrollContentBackground(.hidden)
+        }
+    }
+
+    private var mapContent: some View {
+        ZStack(alignment: .top) {
+            ShopsMapView(
+                shops: results,
+                userLocation: location.currentLocation,
+                onSelect: { shop in navShop = shop }
+            )
+            if results.isEmpty {
+                Text("該当するラーメン店がありません")
+                    .font(.caption.weight(.bold))
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+                    .background(Theme.surface)
+                    .clipShape(Capsule())
+                    .padding(.top, 14)
+                    .shadow(color: .black.opacity(0.1), radius: 4)
+            } else {
+                Text("\(results.count) 店舗を表示中")
+                    .font(.caption.weight(.bold))
+                    .padding(.horizontal, 12).padding(.vertical, 6)
+                    .background(Theme.surface)
+                    .clipShape(Capsule())
+                    .padding(.top, 14)
+                    .shadow(color: .black.opacity(0.1), radius: 4)
+            }
+        }
+        .onAppear {
+            if location.authorizationStatus == .notDetermined {
+                location.request()
+            }
         }
     }
 
     private var filterBar: some View {
         VStack(spacing: 10) {
+            Picker("表示", selection: $displayMode) {
+                ForEach(DisplayMode.allCases) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 16)
+
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     chip(label: "すべて", emoji: "🍜", selected: selectedGenre == nil) {
