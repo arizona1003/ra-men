@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#D14836">
+<title>ラーメンイキタイ</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <!-- ==== タブコンテンツ ==== -->
+  <main id="main">
+    <!-- ホーム -->
+    <section class="view" data-view="home">
+      <header class="topbar">
+        <h1>🍜 ラーメンイキタイ</h1>
+      </header>
+      <div class="hero">
+        <h2 class="hero-title">今日、ラーメンを食べに行こう。</h2>
+        <p class="hero-sub">全国のラーメン店を検索・記録</p>
+        <div class="hero-stats">
+          <div class="stat"><strong id="st-shops">0</strong><span>店舗</span></div>
+          <div class="stat"><strong id="st-reviews">0</strong><span>ラー活</span></div>
+          <div class="stat"><strong id="st-wants">0</strong><span>行きたい</span></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3 class="section-title">ジャンルから探す</h3>
+        <div id="genre-grid" class="genre-grid"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <h3 class="section-title">注目のラーメン店</h3>
+          <button class="link-btn" data-go="ranking">ランキング →</button>
+        </div>
+        <div id="featured" class="shop-scroll"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <h3 class="section-title">最新のラー活</h3>
+        </div>
+        <div id="recent-activity" class="activity-list"></div>
+      </div>
+    </section>
+
+    <!-- 検索 -->
+    <section class="view" data-view="search" hidden>
+      <header class="topbar"><h1>検索</h1></header>
+      <div class="search-controls">
+        <input type="search" id="search-input" placeholder="店名・エリア・ジャンル" class="search-input">
+        <div class="chip-row" id="chip-row"></div>
+        <div class="filter-row">
+          <label>
+            <select id="sort-select">
+              <option value="rating">評価順</option>
+              <option value="reviews">ラー活が多い順</option>
+              <option value="name">名前順</option>
+            </select>
+          </label>
+          <label>
+            <select id="pref-select"><option value="">すべてのエリア</option></select>
+          </label>
+          <label class="switch">
+            <input type="checkbox" id="wants-only">
+            <span>行きたいのみ</span>
+          </label>
+        </div>
+      </div>
+      <div id="search-results" class="result-list"></div>
+    </section>
+
+    <!-- ランキング -->
+    <section class="view" data-view="ranking" hidden>
+      <header class="topbar"><h1>ランキング</h1></header>
+      <div class="tabs-scroll" id="ranking-tabs"></div>
+      <ol id="ranking-list" class="ranking-list"></ol>
+    </section>
+
+    <!-- マイページ -->
+    <section class="view" data-view="mypage" hidden>
+      <header class="topbar"><h1>マイページ</h1></header>
+      <div class="profile">
+        <div class="avatar">🍜</div>
+        <div class="profile-main">
+          <div id="profile-name" class="profile-name">ラーメン好き</div>
+          <div class="profile-stats">
+            <div class="stat"><strong id="my-reviews">0</strong><span>ラー活</span></div>
+            <div class="stat"><strong id="my-wants">0</strong><span>行きたい</span></div>
+            <div class="stat"><strong id="my-avg">-</strong><span>平均</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="tabs-scroll" id="mypage-tabs">
+        <button class="tab active" data-my="reviews">ラー活履歴</button>
+        <button class="tab" data-my="wants">行きたい</button>
+        <button class="tab" data-my="settings">設定</button>
+      </div>
+      <div id="my-content"></div>
+    </section>
+
+    <!-- 店舗詳細 -->
+    <section class="view" data-view="shop" hidden>
+      <div id="shop-detail"></div>
+    </section>
+  </main>
+
+  <!-- ==== タブバー ==== -->
+  <nav class="tabbar">
+    <button class="tab-item active" data-go="home">
+      <span class="tab-ico">🏠</span><span class="tab-label">ホーム</span>
+    </button>
+    <button class="tab-item" data-go="search">
+      <span class="tab-ico">🔍</span><span class="tab-label">検索</span>
+    </button>
+    <button class="tab-item" data-go="ranking">
+      <span class="tab-ico">🏆</span><span class="tab-label">ランキング</span>
+    </button>
+    <button class="tab-item" data-go="mypage">
+      <span class="tab-ico">👤</span><span class="tab-label">マイ</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ==== ラー活投稿モーダル ==== -->
+<div class="modal" id="review-modal" hidden>
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h2>ラー活を記録</h2>
+      <button class="icon-btn" data-close aria-label="閉じる">✕</button>
+    </div>
+    <form id="review-form">
+      <div class="shop-label" id="review-shop-label"></div>
+
+      <label class="field">
+        <span>訪問日</span>
+        <input type="date" name="visitedAt" required>
+      </label>
+
+      <label class="field">
+        <span>注文したメニュー</span>
+        <input type="text" name="menu" placeholder="例：特製醤油ラーメン" required>
+      </label>
+
+      <div class="field">
+        <span>総合評価</span>
+        <div class="star-picker" id="star-picker">
+          <button type="button" data-rate="1">★</button>
+          <button type="button" data-rate="2">★</button>
+          <button type="button" data-rate="3">★</button>
+          <button type="button" data-rate="4">★</button>
+          <button type="button" data-rate="5">★</button>
+        </div>
+        <input type="hidden" name="rating" value="4">
+      </div>
+
+      <div class="field-grid">
+        <label><span>スープ</span>
+          <select name="soup"><option>5</option><option>4</option><option selected>3</option><option>2</option><option>1</option></select>
+        </label>
+        <label><span>麺</span>
+          <select name="noodle"><option>5</option><option>4</option><option selected>3</option><option>2</option><option>1</option></select>
+        </label>
+        <label><span>具</span>
+          <select name="topping"><option>5</option><option>4</option><option selected>3</option><option>2</option><option>1</option></select>
+        </label>
+      </div>
+
+      <div class="field">
+        <span>写真（最大4枚）</span>
+        <div class="photo-row" id="photo-row">
+          <label class="photo-add">
+            <input type="file" accept="image/*" multiple id="photo-input" hidden>
+            <span>＋</span>
+            <em>追加</em>
+          </label>
+        </div>
+      </div>
+
+      <label class="field">
+        <span>感想</span>
+        <textarea name="comment" rows="4" placeholder="スープの味わい、麺の硬さ、お店の雰囲気など"></textarea>
+      </label>
+
+      <div class="form-actions">
+        <button type="button" class="btn ghost" data-close>キャンセル</button>
+        <button type="submit" class="btn primary">投稿する</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ==== 写真ビューア ==== -->
+<div class="viewer" id="photo-viewer" hidden>
+  <button class="viewer-close" data-close aria-label="閉じる">✕</button>
+  <img id="viewer-image" alt="">
+  <div class="viewer-pager" id="viewer-pager"></div>
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
