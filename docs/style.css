@@ -159,7 +159,7 @@ img{max-width:100%;display:block}
   border-top:1px solid var(--border);display:flex;z-index:20;
   padding-bottom:var(--safe-bot);
 }
-.tab-item{flex:1;background:none;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:8px 0 6px;color:var(--sub);font-size:10px;font-weight:700}
+.tab-item{flex:1;background:none;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:8px 0 6px;color:var(--sub);font-size:10px;font-weight:700;position:relative}
 .tab-item .tab-ico{font-size:22px;filter:grayscale(.4) opacity(.8);transition:filter .15s}
 .tab-item.active{color:var(--primary)}
 .tab-item.active .tab-ico{filter:none}
@@ -314,6 +314,94 @@ img{max-width:100%;display:block}
 
 /* 人気急上昇の炎マーク */
 .trending-badge{display:inline-flex;align-items:center;gap:2px;background:#ff6b35;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px}
+
+/* ===== Home logo & search top (サウナイキタイ風) ===== */
+.home-logo{text-align:center;padding:36px 20px 10px}
+.logo-mark{display:inline-block;font-size:32px;font-weight:900;color:var(--primary);line-height:1.05;letter-spacing:.02em;transform:skew(-4deg);text-shadow:2px 2px 0 rgba(209,72,54,.15)}
+.logo-sub{font-size:10px;color:var(--sub);letter-spacing:.3em;margin-top:6px;font-weight:700}
+
+.home-top{padding:14px 20px 20px;text-align:center;background:var(--bg)}
+.home-search-btn{width:100%;background:#fff;border:1px solid var(--border);border-radius:999px;padding:16px 20px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:15px;font-weight:700;color:var(--sub);box-shadow:0 2px 10px rgba(0,0,0,.05);transition:transform .1s}
+.home-search-btn:active{transform:scale(.98)}
+.home-search-btn .hs-ico{font-size:18px}
+.home-search-btn .hs-label{letter-spacing:.02em}
+.home-sub-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.home-sub-btn{background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px 8px;font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 1px 6px rgba(0,0,0,.04);position:relative;overflow:hidden}
+.home-sub-btn::before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,rgba(209,72,54,.04),transparent);pointer-events:none}
+.home-sub-btn .ico{font-size:16px}
+.home-tag{font-size:12px;color:var(--sub);margin:14px 0 0}
+.home-tag strong{color:var(--primary);font-weight:800;font-size:14px}
+.home-mascot{font-size:34px;margin-top:4px;letter-spacing:6px}
+
+/* ===== Home promo ===== */
+.home-promo{margin:0 16px 4px;background:linear-gradient(135deg,var(--primary),var(--primary-dk));color:#fff;border-radius:16px;padding:20px 18px;box-shadow:0 4px 14px rgba(209,72,54,.3)}
+.promo-title{font-size:15px;font-weight:800;text-align:center;margin-bottom:14px}
+.promo-icons{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.promo-ic{text-align:center}
+.pic-circle{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.95);color:var(--primary);font-size:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;box-shadow:0 2px 6px rgba(0,0,0,.12)}
+.pic-label{font-size:11px;font-weight:700;line-height:1.35}
+.home-promo .hero-stats .stat strong,.home-promo .hero-stats .stat span{color:#fff}
+
+/* ===== 5-tab tabbar ===== */
+.tabbar-5 .tab-item{flex:1}
+.tab-post{position:relative}
+.tab-post .tab-ico-post{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-dk));color:#fff;font-size:24px;font-weight:300;box-shadow:0 3px 10px rgba(209,72,54,.4);margin-bottom:-2px;line-height:1}
+.tab-post:active .tab-ico-post{transform:scale(.92)}
+.tab-post .tab-label{font-size:10px;font-weight:700;color:var(--primary)}
+.notify-dot{position:absolute;top:6px;right:calc(50% - 14px);width:8px;height:8px;border-radius:50%;background:#ff3b30;border:2px solid #fff}
+
+/* ===== Feed view ===== */
+.feed-tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);padding:8px 16px;gap:8px}
+.feed-tabs .tab{flex:1;text-align:center}
+.feed-list{padding:0 16px}
+.feed-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:12px}
+.feed-item-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.feed-avatar{width:36px;height:36px;border-radius:50%;background:var(--muted);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:16px;flex-shrink:0}
+.feed-user{flex:1;min-width:0}
+.feed-user .uname{font-size:13px;font-weight:800}
+.feed-user .udate{font-size:11px;color:var(--sub)}
+.feed-shop-link{background:var(--muted);border-radius:8px;padding:10px;display:flex;gap:8px;align-items:center;margin-bottom:8px;text-decoration:none;color:var(--text)}
+.feed-shop-emoji{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;flex-shrink:0}
+.feed-shop-main{flex:1;min-width:0}
+.feed-shop-name{font-size:13px;font-weight:800}
+.feed-shop-meta{font-size:10px;color:var(--sub)}
+.feed-menu{font-size:14px;font-weight:800;color:var(--primary)}
+.feed-rating-row{display:flex;align-items:center;gap:6px;margin-top:4px}
+.feed-rating-row .big{font-size:18px;font-weight:800;color:var(--accent)}
+.feed-comment{font-size:13px;margin-top:6px;white-space:pre-wrap;line-height:1.6}
+.feed-photos{display:flex;gap:4px;margin-top:8px;overflow-x:auto}
+.feed-photos::-webkit-scrollbar{display:none}
+.feed-photos img{width:92px;height:92px;border-radius:8px;object-fit:cover;flex-shrink:0}
+.feed-scores{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
+.feed-score{font-size:10px;background:var(--muted);padding:3px 8px;border-radius:6px;color:var(--text);font-weight:700}
+.feed-score .n{color:var(--primary);font-weight:800}
+
+/* ===== Notify view ===== */
+.notify-list{padding:12px 16px}
+.notify-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;gap:10px;margin-bottom:8px}
+.notify-item.unread{background:#fff8ec;border-color:#f6d38b}
+.notify-ico{width:36px;height:36px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.notify-body{flex:1;min-width:0}
+.notify-title{font-size:13px;font-weight:800}
+.notify-text{font-size:12px;color:var(--sub);margin-top:2px;line-height:1.55}
+.notify-time{font-size:10px;color:var(--sub);margin-top:4px}
+
+/* ===== Map view ===== */
+#map-wrap{position:relative;height:calc(100vh - 56px - var(--tabbar-h) - var(--safe-top) - var(--safe-bot));min-height:420px}
+#leaflet-map{width:100%;height:100%;z-index:1}
+.leaflet-container{font-family:inherit}
+.map-pin{background:var(--primary);color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 6px rgba(0,0,0,.3);border:2px solid #fff}
+.map-shop-info{position:absolute;left:12px;right:12px;bottom:12px;background:#fff;border-radius:12px;padding:12px;box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:1000;animation:slideUp .2s ease;cursor:pointer}
+.map-shop-info-head{display:flex;align-items:center;gap:10px}
+
+/* ===== 店舗ピッカー (投稿タブから) ===== */
+.picker-list{display:grid;gap:8px;max-height:60vh;overflow-y:auto}
+.picker-item{display:flex;gap:10px;align-items:center;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;cursor:pointer}
+.picker-item:active{background:var(--muted)}
+.picker-thumb{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;flex-shrink:0}
+.picker-main{flex:1;min-width:0}
+.picker-name{font-size:13px;font-weight:800}
+.picker-meta{font-size:11px;color:var(--sub)}
 
 /* ===== Utilities ===== */
 [hidden]{display:none !important}

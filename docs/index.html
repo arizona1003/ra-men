@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#D14836">
 <title>ラーメンイキタイ</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,20 +16,41 @@
   <main id="main">
     <!-- ホーム -->
     <section class="view" data-view="home">
-      <header class="topbar">
-        <h1>🍜 ラーメンイキタイ</h1>
-      </header>
-      <div class="hero">
-        <h2 class="hero-title">今日、ラーメンを食べに行こう。</h2>
-        <p class="hero-sub">全国のラーメン店を検索・記録</p>
-        <div class="hero-stats">
+      <div class="home-logo">
+        <div class="logo-mark">ラーメン<br>イキタイ</div>
+        <div class="logo-sub">RAMEN IKITAI</div>
+      </div>
+
+      <div class="home-top">
+        <button class="home-search-btn" data-go="search">
+          <span class="hs-ico">🔍</span>
+          <span class="hs-label">ラーメン店を検索</span>
+        </button>
+        <div class="home-sub-grid">
+          <button class="home-sub-btn" data-go="map">
+            <span class="ico">📍</span> 地図から探す
+          </button>
+          <button class="home-sub-btn" data-go="ranking">
+            <span class="ico">🏆</span> ランキング
+          </button>
+        </div>
+        <p class="home-tag">全国<strong id="st-shops-top">0</strong>店舗のラーメンがあるよ</p>
+        <div class="home-mascot">🍜 🍜</div>
+      </div>
+
+      <div class="home-promo">
+        <div class="promo-title">ラーメンライフがもっと楽しくなる！</div>
+        <div class="promo-icons">
+          <div class="promo-ic"><div class="pic-circle">🔖</div><div class="pic-label">行きたい店を<br>かんたん保存</div></div>
+          <div class="promo-ic"><div class="pic-circle">📝</div><div class="pic-label">ラー活で<br>ラーメン記録</div></div>
+          <div class="promo-ic"><div class="pic-circle">🍜</div><div class="pic-label">全国の名店を<br>発見しよう</div></div>
+        </div>
+        <div class="hero-stats" style="margin-top:14px">
           <div class="stat"><strong id="st-shops">0</strong><span>店舗</span></div>
           <div class="stat"><strong id="st-reviews">0</strong><span>ラー活</span></div>
           <div class="stat"><strong id="st-wants">0</strong><span>行きたい</span></div>
         </div>
       </div>
-
-      <div class="quick-actions" id="quick-actions"></div>
 
       <div class="section">
         <h3 class="section-title">ジャンルから探す</h3>
@@ -53,8 +75,34 @@
       <div class="section">
         <div class="section-head">
           <h3 class="section-title">最新のラー活</h3>
+          <button class="link-btn" data-go="feed">もっと見る →</button>
         </div>
         <div id="recent-activity" class="activity-list"></div>
+      </div>
+    </section>
+
+    <!-- ラー活フィード -->
+    <section class="view" data-view="feed" hidden>
+      <header class="topbar"><h1>ラー活</h1></header>
+      <div class="feed-tabs">
+        <button class="tab active" data-feed="all">みんなのラー活</button>
+        <button class="tab" data-feed="mine">自分のラー活</button>
+      </div>
+      <div id="feed-list" class="feed-list"></div>
+    </section>
+
+    <!-- 通知 -->
+    <section class="view" data-view="notify" hidden>
+      <header class="topbar"><h1>通知</h1></header>
+      <div id="notify-list" class="notify-list"></div>
+    </section>
+
+    <!-- 地図 -->
+    <section class="view" data-view="map" hidden>
+      <header class="topbar"><h1>地図から探す</h1></header>
+      <div id="map-wrap">
+        <div id="leaflet-map"></div>
+        <div id="map-shop-info" class="map-shop-info" hidden></div>
       </div>
     </section>
 
@@ -119,19 +167,23 @@
     </section>
   </main>
 
-  <!-- ==== タブバー ==== -->
-  <nav class="tabbar">
+  <!-- ==== タブバー（5タブ） ==== -->
+  <nav class="tabbar tabbar-5">
     <button class="tab-item active" data-go="home">
       <span class="tab-ico">🏠</span><span class="tab-label">ホーム</span>
     </button>
-    <button class="tab-item" data-go="search">
-      <span class="tab-ico">🔍</span><span class="tab-label">検索</span>
+    <button class="tab-item" data-go="feed">
+      <span class="tab-ico">🍜</span><span class="tab-label">ラー活</span>
     </button>
-    <button class="tab-item" data-go="ranking">
-      <span class="tab-ico">🏆</span><span class="tab-label">ランキング</span>
+    <button class="tab-item tab-post" data-post>
+      <span class="tab-ico-post">＋</span><span class="tab-label">投稿</span>
+    </button>
+    <button class="tab-item" data-go="notify">
+      <span class="tab-ico">🔔</span><span class="tab-label">通知</span>
+      <span class="notify-dot" id="notify-dot" hidden></span>
     </button>
     <button class="tab-item" data-go="mypage">
-      <span class="tab-ico">👤</span><span class="tab-label">マイ</span>
+      <span class="tab-ico">😊</span><span class="tab-label">マイ</span>
     </button>
   </nav>
 </div>
@@ -205,6 +257,19 @@
   </div>
 </div>
 
+<!-- ==== 店舗ピッカーモーダル（投稿タブから） ==== -->
+<div class="modal" id="picker-modal" hidden>
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h2>どのお店でラー活？</h2>
+      <button class="icon-btn" data-close aria-label="閉じる">✕</button>
+    </div>
+    <input type="search" id="picker-input" placeholder="店名で探す" class="search-input" style="margin-bottom:12px">
+    <div id="picker-list" class="picker-list"></div>
+  </div>
+</div>
+
 <!-- ==== 写真ビューア ==== -->
 <div class="viewer" id="photo-viewer" hidden>
   <button class="viewer-close" data-close aria-label="閉じる">✕</button>
@@ -212,6 +277,7 @@
   <div class="viewer-pager" id="viewer-pager"></div>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="data.js"></script>
 <script src="app.js"></script>
 </body>

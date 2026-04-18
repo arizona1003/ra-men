@@ -131,24 +131,8 @@
     $('#st-shops').textContent = SHOPS.length;
     $('#st-reviews').textContent = totalReviews;
     $('#st-wants').textContent = Store.data.wants.length;
-
-    const qa = [
-      { ico: '🔍', label: '検索', go: 'search' },
-      { ico: '🏆', label: 'ランキング', go: 'ranking' },
-      { ico: '🔖', label: '行きたい', go: 'mypage', my: 'wants' },
-      { ico: '📝', label: 'ラー活', go: 'mypage', my: 'reviews' },
-    ];
-    $('#quick-actions').innerHTML = qa.map((q, i) => `<button class="qa-btn" data-qa="${i}">
-      <span class="qa-ico">${q.ico}</span>
-      <span class="qa-label">${q.label}</span>
-    </button>`).join('');
-    $$('#quick-actions .qa-btn').forEach(el => {
-      el.onclick = () => {
-        const q = qa[Number(el.dataset.qa)];
-        if (q.my) MyState.tab = q.my;
-        showView(q.go);
-      };
-    });
+    const stTop = $('#st-shops-top');
+    if (stTop) stTop.textContent = SHOPS.length;
 
     $('#genre-grid').innerHTML = GENRES.map(g => {
       const cnt = SHOPS.filter(s => s.genre === g.key).length;
@@ -457,6 +441,174 @@
     }
   };
 
+  // ---------- Feed (ラー活タブ) ----------
+  const FeedState = { tab: 'all' };
+  views.feed = () => {
+    $$('.feed-tabs .tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.feed === FeedState.tab);
+      t.onclick = () => { FeedState.tab = t.dataset.feed; views.feed(); };
+    });
+    const all = Store.data.reviews.slice().sort((a, b) => new Date(b.visitedAt) - new Date(a.visitedAt));
+    const list = FeedState.tab === 'mine' ? all : all;
+    const host = $('#feed-list');
+    if (!list.length) {
+      host.innerHTML = `<div class="empty" style="margin-top:20px"><span class="emoji">🍜</span>まだラー活がありません</div>`;
+      return;
+    }
+    host.innerHTML = list.map(r => feedItemHTML(r)).join('');
+    $$('#feed-list .feed-shop-link').forEach(el => {
+      el.onclick = ev => { ev.preventDefault(); openShop(el.dataset.id); };
+    });
+    $$('#feed-list .feed-photos img').forEach(img => {
+      img.onclick = () => {
+        const r = list.find(x => x.id === img.dataset.rid);
+        if (r) openViewer(r.photos, Number(img.dataset.i));
+      };
+    });
+  };
+
+  function feedItemHTML(r) {
+    const s = SHOPS.find(x => x.id === r.shopId);
+    if (!s) return '';
+    const g = genre(s.genre);
+    const user = Store.data.profile.name || 'ラーメン好き';
+    const init = user.charAt(0);
+    const photos = (r.photos || []).map((p, i) => `<img src="${p}" data-rid="${r.id}" data-i="${i}" alt="">`).join('');
+    return `<div class="feed-item">
+      <div class="feed-item-head">
+        <div class="feed-avatar" style="background:${g.color}">${init}</div>
+        <div class="feed-user">
+          <div class="uname">${esc(user)}</div>
+          <div class="udate">${relDate(r.visitedAt)}</div>
+        </div>
+      </div>
+      <a class="feed-shop-link" data-id="${s.id}">
+        <div class="feed-shop-emoji" style="background:${g.color}">${g.emoji}</div>
+        <div class="feed-shop-main">
+          <div class="feed-shop-name">${esc(s.name)}</div>
+          <div class="feed-shop-meta">${esc(s.pref)} ${esc(s.area)}</div>
+        </div>
+        <span style="color:var(--sub);font-size:14px">›</span>
+      </a>
+      <div class="feed-menu">${esc(r.menu)}</div>
+      <div class="feed-rating-row">
+        <span class="big">${Number(r.rating).toFixed(1)}</span>
+        <span class="stars" style="font-size:14px">${stars(r.rating)}</span>
+      </div>
+      ${r.comment ? `<div class="feed-comment">${esc(r.comment)}</div>` : ''}
+      ${photos ? `<div class="feed-photos">${photos}</div>` : ''}
+      <div class="feed-scores">
+        <span class="feed-score">スープ <span class="n">${r.soup}</span></span>
+        <span class="feed-score">麺 <span class="n">${r.noodle}</span></span>
+        <span class="feed-score">具 <span class="n">${r.topping}</span></span>
+      </div>
+    </div>`;
+  }
+
+  // ---------- Notify ----------
+  views.notify = () => {
+    $('#notify-dot').hidden = true;
+    localStorage.setItem('ramen_notify_read', '1');
+    const items = [
+      { ico: '🎉', title: 'ラーメンイキタイへようこそ！', text: '全国のラーメン店を検索・記録できるアプリです。まずはジャンルから探してみよう。', time: '今日', unread: true },
+      { ico: '🏆', title: '今週の注目ランキング', text: `${SHOPS.length}店舗からあなたの次の一杯を見つけよう。`, time: '今日', unread: true },
+      { ico: '🔖', title: '行きたいリストを活用しよう', text: '気になる店をブックマークして、食べたい一杯を逃さない。', time: '昨日' },
+      { ico: '📝', title: 'ラー活で記録を残そう', text: 'スープ・麺・具を5段階で評価。写真も最大4枚まで添付できます。', time: '3日前' },
+    ];
+    $('#notify-list').innerHTML = items.map(n => `<div class="notify-item${n.unread ? ' unread' : ''}">
+      <div class="notify-ico">${n.ico}</div>
+      <div class="notify-body">
+        <div class="notify-title">${esc(n.title)}</div>
+        <div class="notify-text">${esc(n.text)}</div>
+        <div class="notify-time">${esc(n.time)}</div>
+      </div>
+    </div>`).join('');
+  };
+
+  // ---------- Map ----------
+  let mapInstance = null;
+  views.map = () => {
+    setTimeout(() => initMap(), 50);
+  };
+  function initMap() {
+    if (typeof L === 'undefined') {
+      $('#leaflet-map').innerHTML = '<div class="empty"><span class="emoji">🗺</span>地図ライブラリの読み込みに失敗しました</div>';
+      return;
+    }
+    if (!mapInstance) {
+      mapInstance = L.map('leaflet-map', { zoomControl: true }).setView([36.5, 138.0], 5);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+        maxZoom: 19,
+      }).addTo(mapInstance);
+      SHOPS.forEach(s => {
+        const g = genre(s.genre);
+        const icon = L.divIcon({
+          className: '',
+          html: `<div class="map-pin" style="background:${g.color}">${g.emoji}</div>`,
+          iconSize: [32, 32],
+          iconAnchor: [16, 16],
+        });
+        const marker = L.marker([s.lat, s.lon], { icon }).addTo(mapInstance);
+        marker.on('click', () => showMapShopInfo(s));
+      });
+    }
+    setTimeout(() => mapInstance.invalidateSize(), 120);
+  }
+  function showMapShopInfo(s) {
+    const g = genre(s.genre);
+    const rating = Store.shopRating(s.id);
+    const panel = $('#map-shop-info');
+    panel.hidden = false;
+    panel.innerHTML = `<div class="map-shop-info-head">
+      <div class="feed-shop-emoji" style="background:${g.color}">${g.emoji}</div>
+      <div class="feed-shop-main">
+        <div class="feed-shop-name">${esc(s.name)}</div>
+        <div class="feed-shop-meta">${esc(s.area)} ・ ⭐${rating > 0 ? rating.toFixed(1) : '-'} ・ 🔖${Store.shopWantCount(s.id)}</div>
+      </div>
+      <span style="color:var(--sub);font-size:18px">›</span>
+    </div>`;
+    panel.onclick = () => openShop(s.id);
+  }
+
+  // ---------- Post picker (投稿タブ) ----------
+  function openPicker() {
+    $('#picker-modal').hidden = false;
+    $('#picker-input').value = '';
+    renderPicker('');
+    $('#picker-input').oninput = () => renderPicker($('#picker-input').value);
+    $$('#picker-modal [data-close]').forEach(el => {
+      el.onclick = () => { $('#picker-modal').hidden = true; };
+    });
+  }
+  function renderPicker(q) {
+    q = (q || '').toLowerCase();
+    const list = SHOPS.filter(s =>
+      !q ||
+      s.name.toLowerCase().includes(q) ||
+      (s.kana || '').toLowerCase().includes(q) ||
+      s.area.toLowerCase().includes(q) ||
+      s.pref.toLowerCase().includes(q)
+    );
+    $('#picker-list').innerHTML = list.map(s => {
+      const g = genre(s.genre);
+      return `<div class="picker-item" data-id="${s.id}">
+        <div class="picker-thumb" style="background:${g.color}">${g.emoji}</div>
+        <div class="picker-main">
+          <div class="picker-name">${esc(s.name)}</div>
+          <div class="picker-meta">${esc(g.name)} ・ ${esc(s.pref)} ${esc(s.area)}</div>
+        </div>
+      </div>`;
+    }).join('') || `<div class="empty" style="padding:20px"><span class="emoji">🔍</span>見つかりませんでした</div>`;
+    $$('#picker-list .picker-item').forEach(el => {
+      el.onclick = () => {
+        const s = SHOPS.find(x => x.id === el.dataset.id);
+        $('#picker-modal').hidden = true;
+        openReviewModal(s);
+      };
+    });
+  }
+
   // ---------- Shop detail ----------
   let currentShopId = null;
   function openShop(id) {
@@ -700,13 +852,22 @@
   // ---------- Event wiring ----------
   function wire() {
     $$('.tab-item').forEach(btn => {
-      btn.onclick = () => showView(btn.dataset.go);
+      if (btn.dataset.post !== undefined) {
+        btn.onclick = () => openPicker();
+      } else {
+        btn.onclick = () => showView(btn.dataset.go);
+      }
     });
     $$('[data-go]').forEach(b => {
       if (!b.classList.contains('tab-item')) {
         b.addEventListener('click', () => showView(b.dataset.go));
       }
     });
+
+    // Notify dot: 初回訪問まで表示
+    if (!localStorage.getItem('ramen_notify_read')) {
+      $('#notify-dot').hidden = false;
+    }
 
     // Modal close
     $$('#review-modal [data-close]').forEach(el => {
