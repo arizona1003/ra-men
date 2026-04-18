@@ -132,11 +132,13 @@
   // ---------- Home ----------
   views.home = () => {
     const totalReviews = Store.data.reviews.length;
-    $('#st-shops').textContent = SHOPS.length;
+    const osmCount = (window._osmShops && window._osmShops.length) || 0;
+    const total = SHOPS.length + osmCount;
+    $('#st-shops').textContent = total.toLocaleString();
     $('#st-reviews').textContent = totalReviews;
     $('#st-wants').textContent = Store.data.wants.length;
     const stTop = $('#st-shops-top');
-    if (stTop) stTop.textContent = SHOPS.length;
+    if (stTop) stTop.textContent = total.toLocaleString();
 
     $('#genre-grid').innerHTML = GENRES.map(g => {
       const cnt = SHOPS.filter(s => s.genre === g.key).length;
@@ -531,9 +533,14 @@
 
   // ---------- Map ----------
   let mapInstance = null;
+  let osmCluster = null;
+  let osmLoaded = false;
+
   views.map = () => {
     setTimeout(() => initMap(), 50);
+    loadOsmShops();
   };
+
   function initMap() {
     if (typeof L === 'undefined') {
       $('#leaflet-map').innerHTML = '<div class="empty"><span class="emoji">🗺</span>地図ライブラリの読み込みに失敗しました</div>';
@@ -542,7 +549,7 @@
     if (!mapInstance) {
       mapInstance = L.map('leaflet-map', { zoomControl: true }).setView([36.5, 138.0], 5);
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap',
+        attribution: '© OpenStreetMap contributors',
         maxZoom: 19,
       }).addTo(mapInstance);
       SHOPS.forEach(s => {
@@ -553,11 +560,203 @@
           iconSize: [32, 32],
           iconAnchor: [16, 16],
         });
-        const marker = L.marker([s.lat, s.lon], { icon }).addTo(mapInstance);
+        const marker = L.marker([s.lat, s.lon], { icon, zIndexOffset: 1000 }).addTo(mapInstance);
         marker.on('click', () => showMapShopInfo(s));
       });
     }
     setTimeout(() => mapInstance.invalidateSize(), 120);
+  }
+
+  // ---------- OSM (全国の実データ) ----------
+  const OSM_CACHE_KEY = 'ramen_osm_v1';
+  const OSM_CACHE_TTL = 7 * 86400000;
+  const OSM_ENDPOINTS = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+  ];
+
+  function showMapBanner(html, err) {
+    const el = $('#map-banner');
+    if (!el) return;
+    el.hidden = false;
+    el.className = 'map-banner' + (err ? ' err' : '');
+    el.innerHTML = html;
+  }
+  function hideMapBanner() {
+    const el = $('#map-banner');
+    if (el) el.hidden = true;
+  }
+
+  function getOsmCache() {
+    try {
+      const raw = localStorage.getItem(OSM_CACHE_KEY);
+      if (!raw) return null;
+      const { at, shops } = JSON.parse(raw);
+      if (!Array.isArray(shops) || Date.now() - at > OSM_CACHE_TTL) return null;
+      return shops;
+    } catch (e) { return null; }
+  }
+  function setOsmCache(shops) {
+    try {
+      localStorage.setItem(OSM_CACHE_KEY, JSON.stringify({ at: Date.now(), shops }));
+    } catch (e) {
+      try {
+        const minimal = shops.map(s => ({ i: s.id, n: s.name, la: s.lat, lo: s.lon, g: s.genre }));
+        localStorage.setItem(OSM_CACHE_KEY, JSON.stringify({ at: Date.now(), shops: minimal }));
+      } catch {}
+    }
+  }
+
+  function inferGenre(tags) {
+    const text = [tags.name, tags['name:ja'], tags.description, tags.cuisine].filter(Boolean).join(' ');
+    if (/味噌|みそ|ミソ/.test(text)) return 'miso';
+    if (/家系/.test(text)) return 'iekei';
+    if (/二郎|ジロー/.test(text)) return 'jiro';
+    if (/つけ麺|つけめん|ツケメン/.test(text)) return 'tsukemen';
+    if (/担々|担担|タンタン|坦々/.test(text)) return 'tantanmen';
+    if (/煮干|にぼし|ニボシ/.test(text)) return 'niboshi';
+    if (/油そば|まぜそば|汁なし/.test(text)) return 'abura';
+    if (/豚骨|とんこつ|トンコツ|博多/.test(text)) return 'tonkotsu';
+    if (/塩|しお|シオ/.test(text)) return 'shio';
+    return 'shoyu';
+  }
+
+  async function overpassFetch() {
+    const query = `[out:json][timeout:90];
+(
+  nwr["cuisine"~"ramen",i](24.0,122.0,46.0,154.0);
+  nwr["cuisine"="noodle"]["name"~"ラーメン|らーめん|ラー麺|麺"](24.0,122.0,46.0,154.0);
+);
+out center tags 6000;`;
+    let lastErr = null;
+    for (const url of OSM_ENDPOINTS) {
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'data=' + encodeURIComponent(query),
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const json = await res.json();
+        if (!json.elements) throw new Error('no elements');
+        return json.elements;
+      } catch (e) { lastErr = e; console.warn('overpass fail', url, e); }
+    }
+    throw lastErr || new Error('all endpoints failed');
+  }
+
+  function elementsToShops(elements) {
+    const out = [];
+    for (const el of elements) {
+      const lat = el.lat || (el.center && el.center.lat);
+      const lon = el.lon || (el.center && el.center.lon);
+      const tags = el.tags || {};
+      const name = tags.name || tags['name:ja'] || tags['name:en'];
+      if (!lat || !lon || !name) continue;
+      const addr = [
+        tags['addr:province'], tags['addr:city'], tags['addr:town'],
+        tags['addr:suburb'], tags['addr:neighbourhood'],
+        tags['addr:street'], tags['addr:housenumber']
+      ].filter(Boolean).join(' ');
+      out.push({
+        id: 'osm_' + el.type + el.id,
+        name: name,
+        kana: tags['name:ja_kana'] || tags['name:ja_rm'] || '',
+        genre: inferGenre(tags),
+        pref: tags['addr:province'] || '',
+        area: tags['addr:city'] || tags['addr:town'] || '',
+        address: addr,
+        hours: tags.opening_hours || '',
+        phone: tags.phone || tags['contact:phone'] || '',
+        website: tags.website || tags['contact:website'] || '',
+        lat, lon,
+        source: 'osm',
+      });
+    }
+    return out;
+  }
+
+  async function loadOsmShops() {
+    if (osmLoaded) return;
+    osmLoaded = true;
+    const cached = getOsmCache();
+    if (cached && cached.length) {
+      applyOsmShops(cached);
+      return;
+    }
+    showMapBanner('<span class="spinner"></span>全国のラーメン店を読み込み中…');
+    try {
+      const elements = await overpassFetch();
+      const shops = elementsToShops(elements);
+      setOsmCache(shops);
+      applyOsmShops(shops);
+    } catch (e) {
+      console.warn(e);
+      showMapBanner('⚠ OSMデータの取得に失敗しました', true);
+      setTimeout(hideMapBanner, 4000);
+      osmLoaded = false;
+    }
+  }
+
+  function applyOsmShops(shops) {
+    window._osmShops = shops;
+    updateShopCountUI(shops.length);
+    if (!mapInstance || typeof L.markerClusterGroup !== 'function') return;
+    if (osmCluster) { mapInstance.removeLayer(osmCluster); osmCluster = null; }
+    osmCluster = L.markerClusterGroup({
+      chunkedLoading: true,
+      maxClusterRadius: 55,
+      spiderfyOnMaxZoom: true,
+      disableClusteringAtZoom: 16,
+    });
+    const curatedCoords = new Set(SHOPS.map(s => s.lat.toFixed(4) + ',' + s.lon.toFixed(4)));
+    shops.forEach(s => {
+      if (curatedCoords.has(s.lat.toFixed(4) + ',' + s.lon.toFixed(4))) return;
+      const g = genre(s.genre);
+      const icon = L.divIcon({
+        className: '',
+        html: `<div class="osm-pin" style="background:${g.color}">${g.emoji}</div>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+      });
+      const m = L.marker([s.lat, s.lon], { icon });
+      m.on('click', () => showOsmShopInfo(s));
+      osmCluster.addLayer(m);
+    });
+    mapInstance.addLayer(osmCluster);
+    showMapBanner(`🍜 全国 <strong>${shops.length.toLocaleString()}</strong> 店舗を表示中 <span style="color:var(--sub);font-weight:normal">(OSM)</span>`);
+    setTimeout(hideMapBanner, 3200);
+  }
+
+  function showOsmShopInfo(s) {
+    const g = genre(s.genre);
+    const panel = $('#map-shop-info');
+    panel.hidden = false;
+    const lines = [];
+    if (s.address) lines.push(`<div style="font-size:11px;color:var(--sub);margin-top:2px">${esc(s.address)}</div>`);
+    if (s.hours) lines.push(`<div style="font-size:11px;color:var(--sub);margin-top:2px">🕐 ${esc(s.hours)}</div>`);
+    const mapsUrl = `https://maps.apple.com/?q=${encodeURIComponent(s.name)}&ll=${s.lat},${s.lon}`;
+    panel.innerHTML = `<div class="map-shop-info-head">
+      <div class="feed-shop-emoji" style="background:${g.color}">${g.emoji}</div>
+      <div class="feed-shop-main">
+        <div class="feed-shop-name">${esc(s.name)}</div>
+        <div class="feed-shop-meta">${esc(genre(s.genre).name)} ・ OSM</div>
+        ${lines.join('')}
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:10px">
+      <a class="btn primary" href="${mapsUrl}" target="_blank" rel="noopener" style="flex:1;text-decoration:none;text-align:center;padding:8px;font-size:12px">Apple マップで開く</a>
+      ${s.website ? `<a class="btn ghost" href="${esc(s.website)}" target="_blank" rel="noopener" style="flex:1;text-decoration:none;text-align:center;padding:8px;font-size:12px">公式サイト</a>` : ''}
+    </div>`;
+    panel.onclick = null;
+  }
+
+  function updateShopCountUI(osmCount) {
+    const el = $('#st-shops-top');
+    if (el) el.textContent = (SHOPS.length + osmCount).toLocaleString();
+    const st = $('#st-shops');
+    if (st) st.textContent = (SHOPS.length + osmCount).toLocaleString();
   }
   function showMapShopInfo(s) {
     const g = genre(s.genre);
@@ -932,5 +1131,11 @@
   // ---------- Init ----------
   Store.load();
   wire();
+  // キャッシュ済みなら即座にカウントと配列を反映
+  const cachedOsm = getOsmCache();
+  if (cachedOsm && cachedOsm.length) {
+    window._osmShops = cachedOsm;
+    updateShopCountUI(cachedOsm.length);
+  }
   showView('home');
 })();
