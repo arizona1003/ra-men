@@ -5,6 +5,11 @@
   const SHOPS = window.SHOPS;
   const DEMO_REVIEWS = window.DEMO_REVIEWS;
   const LS_KEY = 'ramen_ikitai_v1';
+  // 疑似的な「イキタイ」数（コミュニティ感を出すためのダミー）
+  const DEMO_WANTS = {
+    s01: 342, s02: 128, s03: 89, s04: 256, s05: 198, s06: 421,
+    s07: 167, s08: 72, s09: 143, s10: 58, s11: 94, s12: 103,
+  };
 
   // ---------- Store ----------
   const Store = {
@@ -41,6 +46,24 @@
     },
     shopReviewCount(id) {
       return this.data.reviews.filter(r => r.shopId === id).length;
+    },
+    shopWantCount(id) {
+      let base = this.isWanted(id) ? 1 : 0;
+      const demo = DEMO_WANTS[id] || 0;
+      return base + demo;
+    },
+    shopTrendScore(id) {
+      const rs = this.data.reviews.filter(r => r.shopId === id);
+      const recent = rs.filter(r => (Date.now() - new Date(r.visitedAt).getTime()) < 14 * 86400000).length;
+      return recent * 10 + this.shopReviewCount(id) + this.shopWantCount(id) * 2 + this.shopRating(id);
+    },
+    prefRank(shop) {
+      const siblings = SHOPS.filter(s => s.pref === shop.pref)
+        .sort((a, b) => {
+          const d = this.shopRating(b.id) - this.shopRating(a.id);
+          return d !== 0 ? d : this.shopReviewCount(b.id) - this.shopReviewCount(a.id);
+        });
+      return siblings.findIndex(s => s.id === shop.id) + 1;
     },
     toggleWant(id) {
       const i = this.data.wants.indexOf(id);
@@ -109,6 +132,24 @@
     $('#st-reviews').textContent = totalReviews;
     $('#st-wants').textContent = Store.data.wants.length;
 
+    const qa = [
+      { ico: '🔍', label: '検索', go: 'search' },
+      { ico: '🏆', label: 'ランキング', go: 'ranking' },
+      { ico: '🔖', label: '行きたい', go: 'mypage', my: 'wants' },
+      { ico: '📝', label: 'ラー活', go: 'mypage', my: 'reviews' },
+    ];
+    $('#quick-actions').innerHTML = qa.map((q, i) => `<button class="qa-btn" data-qa="${i}">
+      <span class="qa-ico">${q.ico}</span>
+      <span class="qa-label">${q.label}</span>
+    </button>`).join('');
+    $$('#quick-actions .qa-btn').forEach(el => {
+      el.onclick = () => {
+        const q = qa[Number(el.dataset.qa)];
+        if (q.my) MyState.tab = q.my;
+        showView(q.go);
+      };
+    });
+
     $('#genre-grid').innerHTML = GENRES.map(g => {
       const cnt = SHOPS.filter(s => s.genre === g.key).length;
       return `<button class="genre-card" data-genre="${g.key}">
@@ -121,8 +162,14 @@
       el.onclick = () => { State.filterGenre = el.dataset.genre; showView('search'); };
     });
 
+    const trending = SHOPS.slice().sort((a, b) => Store.shopTrendScore(b.id) - Store.shopTrendScore(a.id)).slice(0, 5);
+    $('#trending').innerHTML = trending.map(s => shopCardHTML(s, { trending: true })).join('');
+    $$('#trending .shop-card').forEach(el => {
+      el.onclick = () => openShop(el.dataset.id);
+    });
+
     const featured = SHOPS.slice().sort((a, b) => Store.shopRating(b.id) - Store.shopRating(a.id)).slice(0, 6);
-    $('#featured').innerHTML = featured.map(shopCardHTML).join('');
+    $('#featured').innerHTML = featured.map(s => shopCardHTML(s, { showRank: true })).join('');
     $$('#featured .shop-card').forEach(el => {
       el.onclick = () => openShop(el.dataset.id);
     });
@@ -136,26 +183,43 @@
     });
   };
 
-  function shopCardHTML(s) {
-    const g = genre(s.genre);
+  function rankBadgeHTML(n) {
+    if (n <= 0 || n > 3) return '';
+    const cls = n === 1 ? 'gold' : n === 2 ? 'silver' : 'bronze';
+    return `<span class="rank-badge ${cls}"><span class="crown">👑</span>${n}位</span>`;
+  }
+
+  function statsRowHTML(s) {
     const rating = Store.shopRating(s.id);
+    return `<div class="shop-stats">
+      <span class="stat-item rating"><span class="ico">⭐</span><span class="num">${rating > 0 ? rating.toFixed(1) : '-'}</span></span>
+      <span class="sep">|</span>
+      <span class="stat-item"><span class="ico">📝</span><span class="num">${Store.shopReviewCount(s.id)}</span>ラー活</span>
+      <span class="sep">|</span>
+      <span class="stat-item"><span class="ico">🔖</span><span class="num">${Store.shopWantCount(s.id)}</span>行きたい</span>
+    </div>`;
+  }
+
+  function shopCardHTML(s, opt = {}) {
+    const g = genre(s.genre);
     const photo = Store.latestPhoto(s.id);
     const thumb = photo
       ? `<img src="${photo}" alt="">`
       : `<span>${g.emoji}</span>`;
-    return `<div class="shop-card" data-id="${s.id}">
+    const rank = opt.showRank ? Store.prefRank(s) : 0;
+    const rankOv = (opt.showRank && rank <= 3) ? `<div class="rank-badge-ov">${rankBadgeHTML(rank)}</div>` : '';
+    const trending = opt.trending ? `<span class="trending-badge">🔥 急上昇</span>` : '';
+    return `<div class="shop-card" data-id="${s.id}" style="position:relative">
+      ${rankOv}
       <div class="shop-thumb" style="background:${g.color}">
         ${thumb}
         <span class="genre-tag">${esc(g.name)}</span>
       </div>
       <div class="shop-body">
+        ${trending ? `<div style="margin-bottom:4px">${trending}</div>` : ''}
         <div class="shop-name">${esc(s.name)}</div>
         <div class="shop-meta">${esc(s.pref)} ${esc(s.area)}</div>
-        <div class="shop-rating">
-          <span class="rating-val">${rating > 0 ? rating.toFixed(1) : '-'}</span>
-          <span class="stars">${stars(rating)}</span>
-          <span style="font-size:11px;color:var(--sub)">(${Store.shopReviewCount(s.id)})</span>
-        </div>
+        ${statsRowHTML(s)}
       </div>
     </div>`;
   }
@@ -239,22 +303,20 @@
 
   function shopRowHTML(s) {
     const g = genre(s.genre);
-    const rating = Store.shopRating(s.id);
     const photo = Store.latestPhoto(s.id);
     const thumb = photo ? `<img src="${photo}" alt="">` : g.emoji;
+    const rank = Store.prefRank(s);
     return `<a class="shop-row" data-id="${s.id}">
       <div class="shop-row-thumb" style="background:${g.color}">${thumb}</div>
       <div class="shop-row-main">
         <div class="shop-row-head">
           <span class="mini-genre" style="background:${g.color}22;color:${g.color}">${esc(g.name)}</span>
+          ${rank <= 3 ? rankBadgeHTML(rank) : ''}
           ${Store.isWanted(s.id) ? '<span class="want-mark">🔖</span>' : ''}
         </div>
         <div class="shop-row-name">${esc(s.name)}</div>
-        <div class="shop-row-rating">
-          <span class="stars">${stars(rating)}</span>
-          <span>${rating > 0 ? rating.toFixed(1) : '-'} (${Store.shopReviewCount(s.id)})</span>
-          ・ ${esc(s.pref)} ${esc(s.area)}
-        </div>
+        <div style="font-size:11px;color:var(--sub)">${esc(s.pref)} ${esc(s.area)} ・ ${esc(s.station)}</div>
+        ${statsRowHTML(s)}
       </div>
     </a>`;
   }
@@ -281,7 +343,6 @@
     const ol = $('#ranking-list');
     ol.innerHTML = list.map((s, i) => {
       const g = genre(s.genre);
-      const rating = Store.shopRating(s.id);
       const photo = Store.latestPhoto(s.id);
       const thumb = photo ? `<img src="${photo}" alt="">` : g.emoji;
       return `<li class="ranking-item" data-id="${s.id}">
@@ -289,11 +350,8 @@
         <div class="rank-thumb" style="background:${g.color}22">${thumb}</div>
         <div class="rank-main">
           <div class="rank-name">${esc(s.name)}</div>
-          <div class="rank-meta">${esc(g.name)} ・ ${esc(s.pref)} ${esc(s.area)}</div>
-          <div class="shop-row-rating">
-            <span class="stars">${stars(rating)}</span>
-            <span>${rating > 0 ? rating.toFixed(1) : '-'} (${Store.shopReviewCount(s.id)})</span>
-          </div>
+          <div class="rank-meta">${g.emoji} ${esc(g.name)} ・ ${esc(s.pref)} ${esc(s.area)}</div>
+          ${statsRowHTML(s)}
         </div>
       </li>`;
     }).join('');
@@ -421,23 +479,43 @@
     const mapsUrl = `https://maps.apple.com/?q=${encodeURIComponent(s.name)}&ll=${s.lat},${s.lon}`;
     const osmSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${s.lon - 0.005},${s.lat - 0.003},${s.lon + 0.005},${s.lat + 0.003}&layer=mapnik&marker=${s.lat},${s.lon}`;
 
+    const rank = Store.prefRank(s);
     $('#shop-detail').innerHTML = `
       <div class="detail-head" style="${heroStyle}">
         <button class="detail-back" data-back aria-label="戻る">←</button>
         <span class="detail-genre">${g.emoji} ${esc(g.name)}</span>
+        ${rank <= 3 ? `<div style="margin-top:6px">${rankBadgeHTML(rank)} <span style="font-size:11px;opacity:.9">${esc(s.pref)}</span></div>` : ''}
         <h1 class="detail-name">${esc(s.name)}</h1>
         <div class="detail-kana">${esc(s.kana)}</div>
         <div class="detail-area">${esc(s.pref)} ${esc(s.area)}</div>
         <div class="detail-rating">
           <span class="big">${rating > 0 ? rating.toFixed(1) : '-'}</span>
           <span class="stars" style="font-size:16px">${stars(rating)}</span>
-          <span style="font-size:12px;opacity:.85">ラー活 ${reviews.length}件</span>
+        </div>
+      </div>
+
+      <div class="detail-stats-banner">
+        <div class="ds-item rating">
+          <strong>${rating > 0 ? rating.toFixed(1) : '-'}</strong>
+          <span><span class="ico">⭐</span>評価</span>
+        </div>
+        <div class="ds-divider"></div>
+        <div class="ds-item">
+          <strong>${reviews.length}</strong>
+          <span><span class="ico">📝</span>ラー活</span>
+        </div>
+        <div class="ds-divider"></div>
+        <div class="ds-item">
+          <strong>${Store.shopWantCount(s.id)}</strong>
+          <span><span class="ico">🔖</span>行きたい</span>
         </div>
       </div>
 
       <div class="detail-actions">
+        <button class="btn want-big${wanted ? ' active' : ''}" id="btn-want">
+          <span class="ico">${wanted ? '✓' : '🔖'}</span>${wanted ? '行きたい登録中' : '行きたい'}
+        </button>
         <button class="btn primary" id="btn-review">＋ ラー活を記録</button>
-        <button class="btn ghost${wanted ? ' active' : ''}" id="btn-want">${wanted ? '✓ 行きたい' : '🔖 行きたい'}</button>
       </div>
 
       <div class="detail-section">
@@ -476,9 +554,9 @@
       </div>
 
       <div class="detail-section">
-        <h3>ラー活 (${reviews.length})</h3>
+        <h3>ラー活 <span class="cnt">${reviews.length}件</span></h3>
         ${reviews.length
-          ? reviews.map(r => reviewCardHTML(r)).join('')
+          ? reviews.map(r => timelineReviewHTML(r)).join('')
           : `<div class="empty" style="padding:20px"><span class="emoji">📝</span>まだラー活がありません。最初の一杯を記録しよう！</div>`
         }
       </div>
@@ -486,7 +564,7 @@
     $('[data-back]').onclick = () => showView('home');
     $('#btn-review').onclick = () => openReviewModal(s);
     $('#btn-want').onclick = () => { Store.toggleWant(s.id); renderShopDetail(); };
-    $$('#shop-detail .review-photos img').forEach(img => {
+    $$('#shop-detail .tl-photos img').forEach(img => {
       img.onclick = () => {
         const r = reviews.find(x => x.id === img.dataset.rid);
         if (r) openViewer(r.photos, Number(img.dataset.i));
@@ -494,22 +572,30 @@
     });
   }
 
-  function reviewCardHTML(r) {
+  function timelineReviewHTML(r) {
     const photos = (r.photos || []).map((p, i) => `<img src="${p}" data-rid="${r.id}" data-i="${i}" alt="">`).join('');
-    return `<div class="review-card">
-      <div class="review-head">
-        <span class="review-menu">${esc(r.menu)}</span>
-        <span class="review-date">${fmtDate(r.visitedAt)}</span>
+    const userName = Store.data.profile.name || 'ラーメン好き';
+    const initial = userName.charAt(0);
+    return `<div class="timeline-review">
+      <div class="tl-avatar" style="background:${genre('shoyu').color}">${initial}</div>
+      <div class="tl-body">
+        <div class="tl-head">
+          <span class="tl-user">${esc(userName)}</span>
+          <span class="tl-date">${relDate(r.visitedAt)}</span>
+        </div>
+        <div class="tl-menu">${esc(r.menu)}</div>
+        <div class="tl-rating-row">
+          <span class="big">${Number(r.rating).toFixed(1)}</span>
+          <span class="stars" style="font-size:14px">${stars(r.rating)}</span>
+        </div>
+        ${r.comment ? `<div class="tl-comment">${esc(r.comment)}</div>` : ''}
+        ${photos ? `<div class="tl-photos">${photos}</div>` : ''}
+        <div class="tl-scores">
+          <span class="tl-score">スープ <span class="n">${r.soup}</span></span>
+          <span class="tl-score">麺 <span class="n">${r.noodle}</span></span>
+          <span class="tl-score">具 <span class="n">${r.topping}</span></span>
+        </div>
       </div>
-      <div><span class="stars" style="font-size:14px">${stars(r.rating)}</span>
-        <span style="font-size:12px;color:var(--sub);margin-left:4px">${r.rating}/5</span></div>
-      <div class="score-chips">
-        <span class="score-chip">スープ ${r.soup}</span>
-        <span class="score-chip">麺 ${r.noodle}</span>
-        <span class="score-chip">具 ${r.topping}</span>
-      </div>
-      ${photos ? `<div class="review-photos">${photos}</div>` : ''}
-      ${r.comment ? `<div class="review-comment">${esc(r.comment)}</div>` : ''}
     </div>`;
   }
 

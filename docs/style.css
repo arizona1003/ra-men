@@ -251,5 +251,69 @@ img{max-width:100%;display:block}
 .viewer-pager .dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.4)}
 .viewer-pager .dot.on{background:#fff}
 
+/* ===== Shop stats row (サウナイキタイ風 3指標) ===== */
+.shop-stats{display:flex;align-items:center;gap:10px;margin-top:6px;font-size:11px}
+.shop-stats .stat-item{display:flex;align-items:center;gap:3px;color:var(--sub);font-weight:700}
+.shop-stats .stat-item .ico{font-size:12px}
+.shop-stats .stat-item .num{color:var(--text);font-weight:800}
+.shop-stats .stat-item.rating .num{color:var(--primary);font-size:13px}
+.shop-stats .sep{color:var(--border)}
+
+/* ===== Rank badge ===== */
+.rank-badge{display:inline-flex;align-items:center;gap:3px;background:linear-gradient(135deg,#f6b93b,#e58e26);color:#fff;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:800;box-shadow:0 1px 3px rgba(230,142,38,.3)}
+.rank-badge.gold{background:linear-gradient(135deg,#ffd700,#d4af37)}
+.rank-badge.silver{background:linear-gradient(135deg,#d8d8d8,#9a9a9a)}
+.rank-badge.bronze{background:linear-gradient(135deg,#d8956b,#a06330)}
+.rank-badge .crown{font-size:10px}
+
+/* ===== Quick actions (ホーム) ===== */
+.quick-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 16px 4px}
+.qa-btn{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 4px;text-align:center;transition:transform .12s}
+.qa-btn:active{transform:scale(.95)}
+.qa-btn .qa-ico{font-size:22px;display:block;margin-bottom:3px}
+.qa-btn .qa-label{font-size:10px;font-weight:700;color:var(--text)}
+
+/* ===== Detail hero ver.2 (大きな数値とバナー) ===== */
+.detail-stats-banner{background:var(--surface);padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;gap:8px}
+.ds-item{text-align:center;flex:1}
+.ds-item strong{display:block;font-size:20px;font-weight:800;color:var(--primary);line-height:1.1}
+.ds-item.rating strong{color:var(--accent)}
+.ds-item span{font-size:10px;color:var(--sub);font-weight:700;margin-top:2px;display:block}
+.ds-item .ico{font-size:14px;margin-right:2px}
+.ds-divider{width:1px;height:28px;background:var(--border)}
+
+/* 大きな行きたいボタン */
+.btn.want-big{font-size:15px;padding:14px;border:2px solid var(--primary);background:#fff;color:var(--primary)}
+.btn.want-big.active{background:var(--primary);color:#fff}
+.btn.want-big .ico{font-size:17px;margin-right:4px;vertical-align:-1px}
+
+/* ===== タイムライン風ラー活カード ===== */
+.timeline-review{display:flex;gap:10px;padding:14px 0;border-bottom:1px solid var(--border)}
+.timeline-review:last-child{border-bottom:0}
+.tl-avatar{width:40px;height:40px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;background:var(--muted);color:#fff;font-weight:800}
+.tl-body{flex:1;min-width:0}
+.tl-head{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.tl-user{font-size:13px;font-weight:800;color:var(--text)}
+.tl-date{font-size:11px;color:var(--sub);flex-shrink:0}
+.tl-menu{font-size:13px;font-weight:800;color:var(--primary);margin-top:4px}
+.tl-rating-row{display:flex;align-items:center;gap:6px;margin-top:3px}
+.tl-rating-row .big{font-size:16px;font-weight:800;color:var(--accent)}
+.tl-comment{font-size:13px;margin-top:6px;white-space:pre-wrap;line-height:1.6}
+.tl-scores{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
+.tl-score{font-size:10px;background:var(--muted);padding:3px 8px;border-radius:6px;color:var(--text);font-weight:700}
+.tl-score .n{color:var(--primary);font-weight:800}
+.tl-photos{display:flex;gap:4px;margin-top:8px;overflow-x:auto}
+.tl-photos::-webkit-scrollbar{display:none}
+.tl-photos img{width:88px;height:88px;border-radius:8px;object-fit:cover;flex-shrink:0}
+
+/* セクション見出しのカウント表記 */
+.section-title .cnt{font-size:11px;color:var(--sub);margin-left:6px;font-weight:700}
+
+/* 店舗カードのランキング重畳 */
+.shop-card .rank-badge-ov{position:absolute;top:8px;right:8px;z-index:1}
+
+/* 人気急上昇の炎マーク */
+.trending-badge{display:inline-flex;align-items:center;gap:2px;background:#ff6b35;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px}
+
 /* ===== Utilities ===== */
 [hidden]{display:none !important}
