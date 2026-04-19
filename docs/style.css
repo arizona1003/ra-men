@@ -425,6 +425,25 @@ img{max-width:100%;display:block}
 .dir-btn:active{filter:brightness(.92)}
 .dir-btn .ico{font-size:16px;line-height:1}
 
+/* ===== 営業中/距離/検索フィルタ ===== */
+.open-badge{display:inline-flex;align-items:center;padding:1px 7px;background:#1fa84e;color:#fff;border-radius:10px;font-size:10px;font-weight:800;line-height:1.5}
+.closed-badge{display:inline-flex;align-items:center;padding:1px 7px;background:var(--muted);color:var(--sub);border-radius:10px;font-size:10px;font-weight:700;line-height:1.5}
+.dist-badge{display:inline-flex;align-items:center;padding:1px 7px;background:#e8f0fa;color:#2563eb;border-radius:10px;font-size:10px;font-weight:800;line-height:1.5}
+.filter-row-2{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.filter-btn{flex:1;min-width:110px;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:20px;font-size:12px;font-weight:700;color:var(--text);cursor:pointer}
+.filter-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.filter-btn:active{transform:scale(.98)}
+
+/* ===== 行きたい tab アクション ===== */
+.wants-actions{display:flex;gap:8px;padding:10px 14px;flex-wrap:wrap}
+.wants-actions .btn{flex:1;min-width:140px;padding:10px 8px;font-size:12px}
+
+/* ===== マップフィルタバー ===== */
+.map-filter-bar{position:absolute;top:10px;left:12px;z-index:1002;display:flex;gap:6px;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:20px;padding:4px;box-shadow:0 3px 10px rgba(0,0,0,.12)}
+.mf-btn{padding:6px 12px;border:0;background:transparent;border-radius:16px;font-size:11px;font-weight:800;color:var(--sub);cursor:pointer}
+.mf-btn.active{background:var(--primary);color:#fff}
+.map-pin.wanted{outline:2.5px solid #fff;box-shadow:0 0 0 2px var(--primary),0 2px 6px rgba(0,0,0,.3)}
+
 /* ===== 現在地ボタン ===== */
 .locate-btn{position:absolute;right:14px;bottom:96px;z-index:520;width:44px;height:44px;border-radius:50%;background:#fff;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
 .locate-btn:active{background:var(--muted)}

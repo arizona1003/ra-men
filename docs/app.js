@@ -120,6 +120,95 @@
     return fmtDate(iso);
   };
 
+  // ---------- 距離（Haversine） ----------
+  function distanceKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const toRad = d => d * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+  function fmtDistance(km) {
+    if (km == null) return '';
+    if (km < 1) return `${Math.round(km * 1000)}m`;
+    if (km < 10) return `${km.toFixed(1)}km`;
+    return `${Math.round(km)}km`;
+  }
+
+  // ---------- 営業時間パーサー ----------
+  // 'HH:MM - HH:MM' / 'HH:MM - HH:MM / HH:MM - HH:MM' / 'HH:MM - 翌HH:MM'
+  function parseHours(str) {
+    if (!str) return [];
+    const parts = String(str).split(/[\/、,]+/).map(p => p.trim()).filter(Boolean);
+    const ranges = [];
+    for (const p of parts) {
+      const m = p.match(/(\d{1,2}):(\d{2})\s*[-~〜]\s*(翌)?\s*(\d{1,2}):(\d{2})/);
+      if (!m) continue;
+      const open = Number(m[1]) * 60 + Number(m[2]);
+      let close = Number(m[4]) * 60 + Number(m[5]);
+      if (m[3]) close += 24 * 60;
+      ranges.push({ open, close });
+    }
+    return ranges;
+  }
+  // 'closed' 文字列から、指定日が休業か判定
+  function isClosedToday(closed, date) {
+    if (!closed || /無休/.test(closed)) return false;
+    const dows = ['日曜', '月曜', '火曜', '水曜', '木曜', '金曜', '土曜'];
+    const today = dows[date.getDay()];
+    // 「第N曜日」は毎週ではないので休業扱いしない
+    if (/第\d/.test(closed)) return false;
+    if (closed.includes(today)) return true;
+    if (/祝日/.test(closed) && isHoliday(date)) return true;
+    return false;
+  }
+  function isHoliday(_date) { return false; /* 簡易: 祝日判定は省略 */ }
+  function isOpenNow(shop, now = new Date()) {
+    const ranges = parseHours(shop.hours);
+    if (!ranges.length) return null;
+    if (isClosedToday(shop.closed, now)) return false;
+    const cur = now.getHours() * 60 + now.getMinutes();
+    for (const r of ranges) {
+      if (cur >= r.open && cur < r.close) return true;
+      // 翌日また (close > 1440) 判定は当日分でカバー済
+    }
+    // 深夜帯: 昨日の営業が翌日まで続いている可能性
+    const yesterday = new Date(now.getTime() - 86400000);
+    if (!isClosedToday(shop.closed, yesterday)) {
+      const curPlus = cur + 24 * 60;
+      for (const r of ranges) {
+        if (r.close > 24 * 60 && curPlus < r.close && curPlus >= r.open) return true;
+      }
+    }
+    return false;
+  }
+
+  // ---------- 現在地 ----------
+  const UserLoc = {
+    coords: null, // {lat, lon}
+    get() { return this.coords; },
+    async request() {
+      if (!navigator.geolocation) throw new Error('unsupported');
+      return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            this.coords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+            resolve(this.coords);
+          },
+          (err) => reject(err),
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+        );
+      });
+    },
+    distanceTo(shop) {
+      if (!this.coords) return null;
+      return distanceKm(this.coords.lat, this.coords.lon, shop.lat, shop.lon);
+    },
+  };
+
   // ---------- Router ----------
   const views = {};
   function showView(name, ctx) {
@@ -235,7 +324,7 @@
   }
 
   // ---------- Search ----------
-  const State = { filterGenre: '', query: '', sort: 'rating', pref: '', wantsOnly: false };
+  const State = { filterGenre: '', query: '', sort: 'rating', pref: '', wantsOnly: false, openNow: false };
 
   views.search = () => {
     const chipRow = $('#chip-row');
@@ -252,9 +341,17 @@
       const prefs = [...new Set(SHOPS.map(s => s.pref))].sort();
       prefSel.innerHTML = `<option value="">すべてのエリア</option>` +
         prefs.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+      // 距離順の選択肢を追加
+      const sortSel = $('#sort-select');
+      if (!sortSel.querySelector('option[value="distance"]')) {
+        const opt = document.createElement('option');
+        opt.value = 'distance';
+        opt.textContent = '現在地から近い順';
+        sortSel.appendChild(opt);
+      }
       prefSel.dataset.init = '1';
       prefSel.onchange = () => { State.pref = prefSel.value; views.search(); };
-      $('#sort-select').onchange = () => { State.sort = $('#sort-select').value; views.search(); };
+      sortSel.onchange = () => { onSortChange(sortSel.value); };
       $('#wants-only').onchange = () => { State.wantsOnly = $('#wants-only').checked; views.search(); };
       $('#search-input').oninput = () => { State.query = $('#search-input').value; views.search(); };
     }
@@ -263,10 +360,14 @@
     $('#wants-only').checked = State.wantsOnly;
     $('#search-input').value = State.query;
 
+    // 追加フィルタ行（営業中 & 現在地）
+    injectExtraFilters();
+
     let list = SHOPS.slice();
     if (State.filterGenre) list = list.filter(s => s.genre === State.filterGenre);
     if (State.pref) list = list.filter(s => s.pref === State.pref);
     if (State.wantsOnly) list = list.filter(s => Store.isWanted(s.id));
+    if (State.openNow) list = list.filter(s => isOpenNow(s) === true);
     if (State.query) {
       const q = State.query.toLowerCase();
       list = list.filter(s =>
@@ -280,6 +381,11 @@
     list.sort((a, b) => {
       if (State.sort === 'rating') return Store.shopRating(b.id) - Store.shopRating(a.id);
       if (State.sort === 'reviews') return Store.shopReviewCount(b.id) - Store.shopReviewCount(a.id);
+      if (State.sort === 'distance') {
+        const da = UserLoc.distanceTo(a) ?? 1e9;
+        const db = UserLoc.distanceTo(b) ?? 1e9;
+        return da - db;
+      }
       return a.kana.localeCompare(b.kana, 'ja');
     });
 
@@ -291,17 +397,78 @@
     });
   };
 
+  function onSortChange(val) {
+    if (val === 'distance' && !UserLoc.get()) {
+      requestLocationForSearch().then(() => { State.sort = 'distance'; views.search(); })
+        .catch(() => { State.sort = 'rating'; $('#sort-select').value = 'rating'; views.search(); });
+      return;
+    }
+    State.sort = val;
+    views.search();
+  }
+
+  async function requestLocationForSearch() {
+    try {
+      await UserLoc.request();
+      return true;
+    } catch (e) {
+      alert(e.code === 1 ? '位置情報の許可が必要です（ブラウザ設定から許可してください）' : '現在地を取得できませんでした');
+      throw e;
+    }
+  }
+
+  function injectExtraFilters() {
+    const controls = document.querySelector('.search-controls');
+    if (!controls) return;
+    let extra = controls.querySelector('.filter-row-2');
+    const hasLoc = !!UserLoc.get();
+    const locLabel = hasLoc ? '📍 現在地ON' : '📍 現在地を使う';
+    if (!extra) {
+      extra = document.createElement('div');
+      extra.className = 'filter-row-2';
+      extra.innerHTML = `
+        <button type="button" class="filter-btn" data-f="open">🕐 営業中</button>
+        <button type="button" class="filter-btn" data-f="loc"></button>`;
+      controls.appendChild(extra);
+      extra.querySelector('[data-f="open"]').onclick = (ev) => {
+        State.openNow = !State.openNow;
+        ev.currentTarget.classList.toggle('active', State.openNow);
+        views.search();
+      };
+      extra.querySelector('[data-f="loc"]').onclick = async (ev) => {
+        if (UserLoc.get()) {
+          UserLoc.coords = null;
+          if (State.sort === 'distance') State.sort = 'rating';
+          views.search();
+        } else {
+          try {
+            await requestLocationForSearch();
+            views.search();
+          } catch {}
+        }
+      };
+    }
+    extra.querySelector('[data-f="open"]').classList.toggle('active', State.openNow);
+    const locBtn = extra.querySelector('[data-f="loc"]');
+    locBtn.textContent = locLabel;
+    locBtn.classList.toggle('active', hasLoc);
+  }
+
   function shopRowHTML(s) {
     const g = genre(s.genre);
     const photo = Store.latestPhoto(s.id);
     const thumb = photo ? `<img src="${photo}" alt="">` : g.emoji;
     const rank = Store.prefRank(s);
+    const open = isOpenNow(s);
+    const dist = UserLoc.distanceTo(s);
     return `<a class="shop-row" data-id="${s.id}">
       <div class="shop-row-thumb" style="background:${g.color}">${thumb}</div>
       <div class="shop-row-main">
         <div class="shop-row-head">
           <span class="mini-genre" style="background:${g.color}22;color:${g.color}">${esc(g.name)}</span>
           ${rank <= 3 ? rankBadgeHTML(rank) : ''}
+          ${open === true ? '<span class="open-badge">営業中</span>' : open === false ? '<span class="closed-badge">営業時間外</span>' : ''}
+          ${dist != null ? `<span class="dist-badge">📍 ${fmtDistance(dist)}</span>` : ''}
           ${Store.isWanted(s.id) ? '<span class="want-mark">🔖</span>' : ''}
         </div>
         <div class="shop-row-name">${esc(s.name)}</div>
@@ -418,10 +585,18 @@
       if (!wanted.length) {
         host.innerHTML = `<div class="empty"><span class="emoji">🔖</span>行きたいリストが空です</div>`;
       } else {
-        host.innerHTML = wanted.map(shopRowHTML).join('');
+        host.innerHTML = `<div class="wants-actions">
+          <button class="btn primary" id="btn-wants-map">🗺 行きたいをマップで表示</button>
+          <button class="btn ghost" id="btn-wants-share">📤 行きたいリストを共有</button>
+        </div>` + wanted.map(shopRowHTML).join('');
         $$('#my-content .shop-row').forEach(el => {
           el.onclick = () => openShop(el.dataset.id);
         });
+        $('#btn-wants-map').onclick = () => {
+          MapState.wantsOnly = true;
+          showView('map');
+        };
+        $('#btn-wants-share').onclick = () => shareWantsList(wanted);
       }
     } else {
       host.innerHTML = `<div class="settings-form">
@@ -553,16 +728,36 @@
       prompt('下記URLをコピーしてください', url);
     }
   }
+  async function shareWantsList(shops) {
+    const body = shops.map((s, i) =>
+      `${i + 1}. ${s.name} (${s.pref} ${s.area})\n   ${appleMapsOpenUrl(s)}`
+    ).join('\n\n');
+    const text = `🍜 行きたいラーメン店リスト（${shops.length}件）\n\n${body}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: '行きたいラーメン店', text }); return; }
+      catch (e) { if (e.name === 'AbortError') return; }
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      alert('行きたいリストをコピーしました');
+    } catch {
+      prompt('下記をコピーしてください', text);
+    }
+  }
 
   // ---------- Map ----------
   let mapInstance = null;
   let osmCluster = null;
   let osmLoaded = false;
   let myLocationMarker = null;
+  let curatedLayer = null;
+  const MapState = { wantsOnly: false };
 
   views.map = () => {
     setTimeout(() => initMap(), 50);
     loadOsmShops();
+    applyMapFilter();
+    renderMapFilterUI();
   };
 
   function initMap() {
@@ -576,20 +771,71 @@
         attribution: '© OpenStreetMap contributors',
         maxZoom: 19,
       }).addTo(mapInstance);
-      SHOPS.forEach(s => {
-        const g = genre(s.genre);
-        const icon = L.divIcon({
-          className: '',
-          html: `<div class="map-pin" style="background:${g.color}">${g.emoji}</div>`,
-          iconSize: [32, 32],
-          iconAnchor: [16, 16],
-        });
-        const marker = L.marker([s.lat, s.lon], { icon, zIndexOffset: 1000 }).addTo(mapInstance);
-        marker.on('click', () => showMapShopInfo(s));
-      });
+      curatedLayer = L.layerGroup().addTo(mapInstance);
+      rebuildCuratedMarkers();
       addLocateControl();
     }
     setTimeout(() => mapInstance.invalidateSize(), 120);
+  }
+
+  function rebuildCuratedMarkers() {
+    if (!curatedLayer) return;
+    curatedLayer.clearLayers();
+    const list = MapState.wantsOnly ? SHOPS.filter(s => Store.isWanted(s.id)) : SHOPS;
+    list.forEach(s => {
+      const g = genre(s.genre);
+      const wanted = Store.isWanted(s.id);
+      const icon = L.divIcon({
+        className: '',
+        html: `<div class="map-pin${wanted ? ' wanted' : ''}" style="background:${g.color}">${wanted ? '🔖' : g.emoji}</div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      });
+      const marker = L.marker([s.lat, s.lon], { icon, zIndexOffset: 1000 });
+      marker.on('click', () => showMapShopInfo(s));
+      curatedLayer.addLayer(marker);
+    });
+  }
+
+  function applyMapFilter() {
+    if (!mapInstance || !curatedLayer) return;
+    rebuildCuratedMarkers();
+    // OSM layer show/hide
+    if (osmCluster) {
+      if (MapState.wantsOnly) {
+        if (mapInstance.hasLayer(osmCluster)) mapInstance.removeLayer(osmCluster);
+      } else {
+        if (!mapInstance.hasLayer(osmCluster)) mapInstance.addLayer(osmCluster);
+      }
+    }
+    // Fit bounds to wants
+    if (MapState.wantsOnly) {
+      const wants = SHOPS.filter(s => Store.isWanted(s.id));
+      if (wants.length > 0) {
+        const bounds = L.latLngBounds(wants.map(s => [s.lat, s.lon]));
+        setTimeout(() => mapInstance.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 }), 200);
+        showMapBanner(`🔖 行きたい <strong>${wants.length}</strong> 件を表示中`);
+      } else {
+        showMapBanner('行きたいリストが空です', true);
+        setTimeout(hideMapBanner, 2500);
+      }
+    }
+  }
+
+  function renderMapFilterUI() {
+    const wrap = $('#map-wrap');
+    if (!wrap) return;
+    let bar = wrap.querySelector('.map-filter-bar');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.className = 'map-filter-bar';
+      wrap.appendChild(bar);
+    }
+    bar.innerHTML = `
+      <button class="mf-btn${!MapState.wantsOnly ? ' active' : ''}" data-f="all">すべて</button>
+      <button class="mf-btn${MapState.wantsOnly ? ' active' : ''}" data-f="wants">🔖 行きたい</button>`;
+    bar.querySelector('[data-f="all"]').onclick = () => { MapState.wantsOnly = false; applyMapFilter(); renderMapFilterUI(); };
+    bar.querySelector('[data-f="wants"]').onclick = () => { MapState.wantsOnly = true; applyMapFilter(); renderMapFilterUI(); };
   }
 
   function addLocateControl() {
@@ -614,6 +860,7 @@
       (pos) => {
         if (btn) btn.classList.remove('loading');
         const { latitude: lat, longitude: lon } = pos.coords;
+        UserLoc.coords = { lat, lon };
         if (myLocationMarker) mapInstance.removeLayer(myLocationMarker);
         const icon = L.divIcon({
           className: '',
@@ -793,9 +1040,11 @@ out center tags 6000;`;
       m.on('click', () => showOsmShopInfo(s));
       osmCluster.addLayer(m);
     });
-    mapInstance.addLayer(osmCluster);
-    showMapBanner(`🍜 全国 <strong>${shops.length.toLocaleString()}</strong> 店舗を表示中 <span style="color:var(--sub);font-weight:normal">(OSM)</span>`);
-    setTimeout(hideMapBanner, 3200);
+    if (!MapState.wantsOnly) {
+      mapInstance.addLayer(osmCluster);
+      showMapBanner(`🍜 全国 <strong>${shops.length.toLocaleString()}</strong> 店舗を表示中 <span style="color:var(--sub);font-weight:normal">(OSM)</span>`);
+      setTimeout(hideMapBanner, 3200);
+    }
   }
 
   function showOsmShopInfo(s) {
