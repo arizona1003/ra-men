@@ -414,5 +414,25 @@ img{max-width:100%;display:block}
 .picker-name{font-size:13px;font-weight:800}
 .picker-meta{font-size:11px;color:var(--sub)}
 
+/* ===== Apple Maps アクション ===== */
+.apple-actions{display:flex;gap:6px;flex-wrap:wrap}
+.apple-act{flex:1;min-width:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:9px 6px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-size:11px;font-weight:700;color:var(--text);text-decoration:none;cursor:pointer;transition:background .12s}
+.apple-act:active{background:var(--muted);transform:scale(.98)}
+.apple-act .ico{font-size:18px;line-height:1}
+.dir-label{font-size:11px;color:var(--sub);margin:14px 0 6px;font-weight:700}
+.dir-row{display:flex;gap:6px}
+.dir-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:10px 6px;background:linear-gradient(135deg,#D14836,#B83A2C);color:#fff;border-radius:10px;font-size:12px;font-weight:800;text-decoration:none;border:0}
+.dir-btn:active{filter:brightness(.92)}
+.dir-btn .ico{font-size:16px;line-height:1}
+
+/* ===== 現在地ボタン ===== */
+.locate-btn{position:absolute;right:14px;bottom:96px;z-index:520;width:44px;height:44px;border-radius:50%;background:#fff;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.locate-btn:active{background:var(--muted)}
+.locate-btn.loading{opacity:.6;pointer-events:none}
+.my-loc-pin{position:relative;width:24px;height:24px;display:flex;align-items:center;justify-content:center}
+.my-loc-pin .dot{position:absolute;width:14px;height:14px;border-radius:50%;background:#2563eb;border:2.5px solid #fff;box-shadow:0 0 0 1px rgba(37,99,235,.3),0 1px 4px rgba(0,0,0,.25);z-index:2}
+.my-loc-pin .pulse{position:absolute;width:24px;height:24px;border-radius:50%;background:rgba(37,99,235,.35);animation:loc-pulse 1.6s ease-out infinite;z-index:1}
+@keyframes loc-pulse{0%{transform:scale(.6);opacity:.8}100%{transform:scale(2.2);opacity:0}}
+
 /* ===== Utilities ===== */
 [hidden]{display:none !important}

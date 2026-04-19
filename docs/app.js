@@ -531,10 +531,34 @@
     </div>`).join('');
   };
 
+  // ---------- Apple Maps integration ----------
+  function appleMapsOpenUrl(s) {
+    return `https://maps.apple.com/?q=${encodeURIComponent(s.name)}&ll=${s.lat},${s.lon}`;
+  }
+  function appleMapsDirectionsUrl(s, mode = 'd') {
+    // dirflg: d=driving, w=walking, r=transit
+    return `https://maps.apple.com/?daddr=${s.lat},${s.lon}&dirflg=${mode}&q=${encodeURIComponent(s.name)}`;
+  }
+  async function shareShop(s) {
+    const url = appleMapsOpenUrl(s);
+    const text = `${s.name} (${s.pref} ${s.area})`;
+    if (navigator.share) {
+      try { await navigator.share({ title: s.name, text, url }); return; }
+      catch (e) { if (e.name === 'AbortError') return; }
+    }
+    try {
+      await navigator.clipboard.writeText(`${text}\n${url}`);
+      alert('リンクをコピーしました');
+    } catch {
+      prompt('下記URLをコピーしてください', url);
+    }
+  }
+
   // ---------- Map ----------
   let mapInstance = null;
   let osmCluster = null;
   let osmLoaded = false;
+  let myLocationMarker = null;
 
   views.map = () => {
     setTimeout(() => initMap(), 50);
@@ -563,8 +587,53 @@
         const marker = L.marker([s.lat, s.lon], { icon, zIndexOffset: 1000 }).addTo(mapInstance);
         marker.on('click', () => showMapShopInfo(s));
       });
+      addLocateControl();
     }
     setTimeout(() => mapInstance.invalidateSize(), 120);
+  }
+
+  function addLocateControl() {
+    const wrap = $('#map-wrap');
+    if (!wrap || wrap.querySelector('.locate-btn')) return;
+    const btn = document.createElement('button');
+    btn.className = 'locate-btn';
+    btn.setAttribute('aria-label', '現在地');
+    btn.innerHTML = '📍';
+    btn.onclick = () => locateMe(btn);
+    wrap.appendChild(btn);
+  }
+
+  function locateMe(btn) {
+    if (!navigator.geolocation) {
+      showMapBanner('このブラウザは現在地取得に対応していません', true);
+      setTimeout(hideMapBanner, 2500);
+      return;
+    }
+    if (btn) btn.classList.add('loading');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (btn) btn.classList.remove('loading');
+        const { latitude: lat, longitude: lon } = pos.coords;
+        if (myLocationMarker) mapInstance.removeLayer(myLocationMarker);
+        const icon = L.divIcon({
+          className: '',
+          html: '<div class="my-loc-pin"><span class="pulse"></span><span class="dot"></span></div>',
+          iconSize: [24, 24],
+          iconAnchor: [12, 12],
+        });
+        myLocationMarker = L.marker([lat, lon], { icon, zIndexOffset: 5000 }).addTo(mapInstance);
+        mapInstance.setView([lat, lon], 14);
+        showMapBanner('📍 現在地を表示しました');
+        setTimeout(hideMapBanner, 2200);
+      },
+      (err) => {
+        if (btn) btn.classList.remove('loading');
+        const msg = err.code === 1 ? '位置情報の許可が必要です' : '現在地を取得できませんでした';
+        showMapBanner(msg, true);
+        setTimeout(hideMapBanner, 2800);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+    );
   }
 
   // ---------- OSM (全国の実データ) ----------
@@ -736,7 +805,8 @@ out center tags 6000;`;
     const lines = [];
     if (s.address) lines.push(`<div style="font-size:11px;color:var(--sub);margin-top:2px">${esc(s.address)}</div>`);
     if (s.hours) lines.push(`<div style="font-size:11px;color:var(--sub);margin-top:2px">🕐 ${esc(s.hours)}</div>`);
-    const mapsUrl = `https://maps.apple.com/?q=${encodeURIComponent(s.name)}&ll=${s.lat},${s.lon}`;
+    const mapsUrl = appleMapsOpenUrl(s);
+    const dirUrl = appleMapsDirectionsUrl(s, 'd');
     panel.innerHTML = `<div class="map-shop-info-head">
       <div class="feed-shop-emoji" style="background:${g.color}">${g.emoji}</div>
       <div class="feed-shop-main">
@@ -745,11 +815,15 @@ out center tags 6000;`;
         ${lines.join('')}
       </div>
     </div>
-    <div style="display:flex;gap:6px;margin-top:10px">
-      <a class="btn primary" href="${mapsUrl}" target="_blank" rel="noopener" style="flex:1;text-decoration:none;text-align:center;padding:8px;font-size:12px">Apple マップで開く</a>
-      ${s.website ? `<a class="btn ghost" href="${esc(s.website)}" target="_blank" rel="noopener" style="flex:1;text-decoration:none;text-align:center;padding:8px;font-size:12px">公式サイト</a>` : ''}
+    <div class="apple-actions">
+      <a class="apple-act" href="${mapsUrl}" target="_blank" rel="noopener"><span class="ico">🗺</span><span>地図で開く</span></a>
+      <a class="apple-act" href="${dirUrl}" target="_blank" rel="noopener"><span class="ico">🧭</span><span>経路案内</span></a>
+      <button class="apple-act" data-share-osm="${s.id}"><span class="ico">📤</span><span>共有</span></button>
+      ${s.website ? `<a class="apple-act" href="${esc(s.website)}" target="_blank" rel="noopener"><span class="ico">🔗</span><span>公式</span></a>` : ''}
     </div>`;
     panel.onclick = null;
+    const shareBtn = panel.querySelector('[data-share-osm]');
+    if (shareBtn) shareBtn.onclick = (e) => { e.stopPropagation(); shareShop(s); };
   }
 
   function updateShopCountUI(osmCount) {
@@ -831,7 +905,10 @@ out center tags 6000;`;
       : `background:${g.color}`;
     const wanted = Store.isWanted(s.id);
     const reviews = Store.reviewsByShop(s.id);
-    const mapsUrl = `https://maps.apple.com/?q=${encodeURIComponent(s.name)}&ll=${s.lat},${s.lon}`;
+    const mapsUrl = appleMapsOpenUrl(s);
+    const dirDriveUrl = appleMapsDirectionsUrl(s, 'd');
+    const dirWalkUrl = appleMapsDirectionsUrl(s, 'w');
+    const dirTransitUrl = appleMapsDirectionsUrl(s, 'r');
     const osmSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${s.lon - 0.005},${s.lat - 0.003},${s.lon + 0.005},${s.lat + 0.003}&layer=mapnik&marker=${s.lat},${s.lon}`;
 
     const rank = Store.prefRank(s);
@@ -903,9 +980,18 @@ out center tags 6000;`;
       </div>
 
       <div class="detail-section">
-        <h3>地図</h3>
+        <h3>地図・アクセス</h3>
         <iframe class="map-embed" loading="lazy" src="${osmSrc}" title="地図"></iframe>
-        <a class="btn primary" href="${mapsUrl}" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-top:10px">Apple マップで開く</a>
+        <div class="apple-actions" style="margin-top:10px">
+          <a class="apple-act" href="${mapsUrl}" target="_blank" rel="noopener"><span class="ico">🗺</span><span>地図で開く</span></a>
+          <button class="apple-act" id="btn-share-shop"><span class="ico">📤</span><span>共有</span></button>
+        </div>
+        <div class="dir-label">Apple マップで経路案内</div>
+        <div class="dir-row">
+          <a class="dir-btn" href="${dirDriveUrl}" target="_blank" rel="noopener"><span class="ico">🚗</span><span>車</span></a>
+          <a class="dir-btn" href="${dirWalkUrl}" target="_blank" rel="noopener"><span class="ico">🚶</span><span>徒歩</span></a>
+          <a class="dir-btn" href="${dirTransitUrl}" target="_blank" rel="noopener"><span class="ico">🚃</span><span>交通</span></a>
+        </div>
       </div>
 
       <div class="detail-section">
@@ -919,6 +1005,8 @@ out center tags 6000;`;
     $('[data-back]').onclick = () => showView('home');
     $('#btn-review').onclick = () => openReviewModal(s);
     $('#btn-want').onclick = () => { Store.toggleWant(s.id); renderShopDetail(); };
+    const shareBtn = $('#btn-share-shop');
+    if (shareBtn) shareBtn.onclick = () => shareShop(s);
     $$('#shop-detail .tl-photos img').forEach(img => {
       img.onclick = () => {
         const r = reviews.find(x => x.id === img.dataset.rid);
