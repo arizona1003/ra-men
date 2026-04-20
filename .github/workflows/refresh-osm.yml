@@ -1,0 +1,37 @@
+name: Refresh OSM ramen data
+
+on:
+  schedule:
+    # 毎週月曜 18:00 JST (= 09:00 UTC)
+    - cron: '0 9 * * 1'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch OSM ramen data
+        run: node scripts/fetch-osm.mjs
+        timeout-minutes: 10
+
+      - name: Commit if changed
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          if git diff --quiet docs/osm-data.json; then
+            echo "No changes."
+          else
+            git add docs/osm-data.json
+            COUNT=$(node -e "console.log(JSON.parse(require('fs').readFileSync('docs/osm-data.json')).count)")
+            git commit -m "Refresh OSM ramen data (${COUNT} shops)"
+            git push
+          fi
