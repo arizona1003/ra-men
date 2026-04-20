@@ -16,14 +16,13 @@ const ENDPOINTS = [
 // - 全国チェーン（一蘭/一風堂/天下一品/幸楽苑/日高屋/8番らーめん 等）
 const NAME_PATTERN = 'ラーメン|らーめん|らあめん|らー麺|ラー麺|中華そば|中華蕎麦|支那そば|つけ麺|つけめん|油そば|まぜそば|担々麺|担担麺|タンタン麺|家系|二郎|博多|一蘭|一風堂|天下一品|幸楽苑|日高屋|8番らーめん|来来亭|スガキヤ|くるまや|花月嵐|横綱|町田商店|魁力屋|蒙古タンメン|よってこや|くじら軒';
 
-const QUERY = `[out:json][timeout:240];
+// Overpass 公共インスタンスは重いクエリでタイムアウトしやすいので
+// cuisine タグに絞って取得（これでもラーメン店の大半がヒット）
+const QUERY = `[out:json][timeout:180];
+area["ISO3166-1"="JP"]->.jp;
 (
-  nwr["cuisine"~"ramen",i](24.0,122.0,46.0,154.0);
-  nwr["cuisine"~"noodle",i]["name"~"${NAME_PATTERN}"](24.0,122.0,46.0,154.0);
-  nwr["cuisine"~"japanese",i]["name"~"${NAME_PATTERN}"](24.0,122.0,46.0,154.0);
-  nwr["amenity"="restaurant"]["name"~"${NAME_PATTERN}"](24.0,122.0,46.0,154.0);
-  nwr["amenity"="fast_food"]["name"~"${NAME_PATTERN}"](24.0,122.0,46.0,154.0);
-  nwr["shop"="restaurant"]["name"~"${NAME_PATTERN}"](24.0,122.0,46.0,154.0);
+  nwr(area.jp)["cuisine"~"ramen",i];
+  nwr(area.jp)["cuisine"="noodle"]["name"~"${NAME_PATTERN}"];
 );
 out center tags;`;
 
@@ -144,20 +143,32 @@ function elementsToShops(elements) {
 async function fetchOverpass() {
   let lastErr = null;
   for (const url of ENDPOINTS) {
+    const startedAt = Date.now();
     try {
       console.log(`[fetch] ${url}`);
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'ra-men-app-refresh/1.0 (github.com/arizona1003/ra-men)',
+        },
         body: 'data=' + encodeURIComponent(QUERY),
       });
+      const elapsed = Date.now() - startedAt;
+      console.log(`[fetch] ${url} → ${res.status} (${elapsed}ms)`);
       if (!res.ok) {
-        lastErr = new Error(`HTTP ${res.status}`);
-        console.warn(`[warn] ${url}: ${res.status}`);
+        const body = await res.text();
+        console.warn(`[warn] body: ${body.slice(0, 500)}`);
+        lastErr = new Error(`HTTP ${res.status}: ${body.slice(0, 200)}`);
         continue;
       }
       const data = await res.json();
-      if (data.elements) return data.elements;
+      if (!data.elements) {
+        console.warn(`[warn] no elements in response`);
+        continue;
+      }
+      console.log(`[ok] ${data.elements.length} elements from ${url}`);
+      return data.elements;
     } catch (e) {
       lastErr = e;
       console.warn(`[warn] ${url}: ${e.message}`);
