@@ -220,6 +220,8 @@
 
   // ---------- Home ----------
   views.home = () => {
+    // ホーム表示時にバックグラウンドで OSM データを先読み（Mapを開いたとき即時表示）
+    setTimeout(() => loadOsmShops(), 100);
     const totalReviews = Store.data.reviews.length;
     const osmCount = (window._osmShops && window._osmShops.length) || 0;
     const total = SHOPS.length + osmCount;
@@ -754,7 +756,13 @@
   const MapState = { wantsOnly: false };
 
   views.map = () => {
-    setTimeout(() => initMap(), 50);
+    setTimeout(() => {
+      initMap();
+      // 既にバックグラウンドで取得済みなら即マーカー化
+      if (window._osmShops && window._osmShops.length && !osmCluster) {
+        applyOsmShops(window._osmShops);
+      }
+    }, 50);
     loadOsmShops();
     applyMapFilter();
     renderMapFilterUI();
@@ -993,14 +1001,37 @@ out center tags 6000;`;
     return out;
   }
 
+  async function loadStaticOsmShops() {
+    try {
+      const res = await fetch('osm-data.json', { cache: 'force-cache' });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!data || !Array.isArray(data.shops) || data.shops.length === 0) return null;
+      // 静的バンドルは source: 'osm' フラグがないので付与
+      return data.shops.map(s => ({ ...s, source: 'osm' }));
+    } catch (e) {
+      return null;
+    }
+  }
+
   async function loadOsmShops() {
     if (osmLoaded) return;
     osmLoaded = true;
+    // 1. 静的バンドル（GitHub Action でコミットされた実データ）
+    const bundled = await loadStaticOsmShops();
+    if (bundled && bundled.length) {
+      applyOsmShops(bundled);
+      // バックグラウンドで最新版を試行（成功時のみ差し替え）
+      refreshOsmInBackground();
+      return;
+    }
+    // 2. ローカルキャッシュ（過去にAPIから取得したもの）
     const cached = getOsmCache();
     if (cached && cached.length) {
       applyOsmShops(cached);
       return;
     }
+    // 3. ライブAPI
     showMapBanner('<span class="spinner"></span>全国のラーメン店を読み込み中…');
     try {
       const elements = await overpassFetch();
@@ -1013,6 +1044,19 @@ out center tags 6000;`;
       setTimeout(hideMapBanner, 4000);
       osmLoaded = false;
     }
+  }
+
+  async function refreshOsmInBackground() {
+    const cached = getOsmCache();
+    if (cached && cached.length) return; // 直近に更新済みならスキップ
+    try {
+      const elements = await overpassFetch();
+      const shops = elementsToShops(elements);
+      if (shops.length > (window._osmShops?.length || 0)) {
+        setOsmCache(shops);
+        applyOsmShops(shops);
+      }
+    } catch {}
   }
 
   function applyOsmShops(shops) {

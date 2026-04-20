@@ -149,6 +149,19 @@ cd docs && python3 -m http.server 8000
 
 同じ Wi-Fi 上の iPhone から `http://<PCのIP>:8000/` で開けます。
 
+### 全国の実店舗データ（OpenStreetMap）
+
+- `docs/osm-data.json` に OpenStreetMap (Overpass API) から取得した全国のラーメン店データをバンドルしています
+- `.github/workflows/refresh-osm.yml` が **毎週月曜 18:00 JST** に自動更新します
+- 手動で更新したい場合は GitHub の **Actions → Refresh OSM ramen data → Run workflow** をクリック
+- 初期状態は空（`count: 0`）。初回マージ後にワークフローを手動実行すると数千〜1万店舗が追加されます
+- データのライセンス: [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) © OpenStreetMap contributors
+
+ローカルで生成する場合:
+```bash
+node scripts/fetch-osm.mjs
+```
+
 ## ライセンス
 
 個人利用・学習目的のサンプルプロジェクトです。
